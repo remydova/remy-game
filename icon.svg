@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
+  <!-- full-bleed navy background -->
+  <rect width="192" height="192" fill="#0c0c18"/>
+
+  <!-- left ear -->
+  <polygon points="62,84 54,61 79,82" fill="#d4956a"/>
+  <polygon points="63,82 58,66 76,81" fill="#e09080"/>
+  <!-- right ear -->
+  <polygon points="114,82 130,61 122,84" fill="#d4956a"/>
+  <polygon points="115,81 128,66 121,82" fill="#e09080"/>
+
+  <!-- body -->
+  <rect x="58" y="80" width="76" height="54" rx="11" fill="#d4956a"/>
+
+  <!-- tabby stripes clipped to body -->
+  <clipPath id="b"><rect x="58" y="80" width="76" height="54" rx="11"/></clipPath>
+  <rect x="72" y="80" width="5" height="54" fill="#b07040" clip-path="url(#b)"/>
+  <rect x="86" y="78" width="4" height="58" fill="#b07040" clip-path="url(#b)"/>
+  <rect x="100" y="80" width="4" height="52" fill="#b07040" clip-path="url(#b)"/>
+
+  <!-- eyes -->
+  <ellipse cx="83" cy="99" rx="5.5" ry="6.5" fill="#1a1a2e"/>
+  <ellipse cx="109" cy="99" rx="5.5" ry="6.5" fill="#1a1a2e"/>
+  <circle cx="85.5" cy="96" r="1.8" fill="white" opacity="0.82"/>
+  <circle cx="111.5" cy="96" r="1.8" fill="white" opacity="0.82"/>
+
+  <!-- nose -->
+  <polygon points="96,112 92,108 100,108" fill="#d08070"/>
+
+  <!-- mouth -->
+  <path d="M96,112 Q92,117 89,115" stroke="#a06050" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+  <path d="M96,112 Q100,117 103,115" stroke="#a06050" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+
+  <!-- whiskers -->
+  <line x1="90" y1="108" x2="68" y2="104" stroke="#e8ddd0" stroke-width="0.9" opacity="0.5"/>
+  <line x1="90" y1="111" x2="69" y2="112" stroke="#e8ddd0" stroke-width="0.9" opacity="0.5"/>
+  <line x1="102" y1="108" x2="124" y2="104" stroke="#e8ddd0" stroke-width="0.9" opacity="0.5"/>
+  <line x1="102" y1="111" x2="123" y2="112" stroke="#e8ddd0" stroke-width="0.9" opacity="0.5"/>
+
+  <!-- tail -->
+  <path d="M134,128 C150,142 158,122 146,108" stroke="#d4956a" stroke-width="7" fill="none" stroke-linecap="round"/>
+  <path d="M134,128 C150,142 158,122 146,108" stroke="#b07040" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+
+  <!-- label -->
+  <text x="96" y="158" font-family="Georgia,serif" font-style="italic" font-weight="bold" font-size="14" fill="#d4956a" text-anchor="middle">miso floats</text>
+</svg>

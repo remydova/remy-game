@@ -1,0 +1,17 @@
+{
+  "name": "miso floats",
+  "short_name": "miso floats",
+  "description": "help miso the tabby cat float through remy's apartment",
+  "start_url": "./miso-floats.html",
+  "display": "standalone",
+  "background_color": "#0c0c18",
+  "theme_color": "#0c0c18",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable any"
+    }
+  ]
+}

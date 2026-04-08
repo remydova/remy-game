@@ -9,6 +9,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="miso floats">
+<link rel="manifest" href="manifest.json">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{width:100%;height:100%;background:#0c0c18;overflow:hidden;touch-action:none}
@@ -88,32 +89,18 @@ function makeMisoIcon(size) {
   return ic.toDataURL('image/png');
 }
 
-// ── PWA manifest (inline blob) ────────────────────────────────────────────────
+// ── Apple touch icon (canvas-generated for iOS) ───────────────────────────────
 (function(){
-  const icon192 = makeMisoIcon(192);
-  const icon512 = makeMisoIcon(512);
-
-  // apple touch icon
   const apple = document.createElement('link');
   apple.rel = 'apple-touch-icon';
   apple.href = makeMisoIcon(180);
   document.head.appendChild(apple);
-
-  const m = {
-    name:'miso floats', short_name:'miso floats',
-    start_url:'.', display:'standalone',
-    background_color:'#0c0c18', theme_color:'#0c0c18',
-    description:"help miso the tabby cat float through remy's apartment",
-    icons:[
-      {src: icon192, sizes:'192x192', type:'image/png', purpose:'maskable any'},
-      {src: icon512, sizes:'512x512', type:'image/png', purpose:'maskable any'},
-    ]
-  };
-  const el = document.createElement('link');
-  el.rel = 'manifest';
-  el.href = URL.createObjectURL(new Blob([JSON.stringify(m)],{type:'application/manifest+json'}));
-  document.head.appendChild(el);
 })();
+
+// ── Service worker ────────────────────────────────────────────────────────────
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('./sw.js').catch(()=>{});
+}
 
 // ── Canvas ────────────────────────────────────────────────────────────────────
 const cv = document.getElementById('c');
