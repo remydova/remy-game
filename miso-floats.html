@@ -26,16 +26,14 @@ function makeMisoIcon(size) {
   const x = ic.getContext('2d');
   const s = size / 192; // scale factor relative to 192px design
 
-  // background
+  // full-bleed navy background — no rounded corners, maskable icons need edge-to-edge fill
   x.fillStyle = '#0c0c18';
-  x.beginPath();
-  x.roundRect(0, 0, size, size, size * 0.22);
-  x.fill();
+  x.fillRect(0, 0, size, size);
 
-  // center the cat
+  // center the cat — shifted up slightly to leave room for text below
   x.save();
-  x.translate(size * 0.5, size * 0.52);
-  x.scale(s * 2.6, s * 2.6);
+  x.translate(size * 0.5, size * 0.46);
+  x.scale(s * 3.0, s * 3.0);
 
   const hw = 22, hh = 16;
 
@@ -107,8 +105,8 @@ function makeMisoIcon(size) {
     background_color:'#0c0c18', theme_color:'#0c0c18',
     description:"help miso the tabby cat float through remy's apartment",
     icons:[
-      {src: icon192, sizes:'192x192', type:'image/png'},
-      {src: icon512, sizes:'512x512', type:'image/png'},
+      {src: icon192, sizes:'192x192', type:'image/png', purpose:'maskable any'},
+      {src: icon512, sizes:'512x512', type:'image/png', purpose:'maskable any'},
     ]
   };
   const el = document.createElement('link');
