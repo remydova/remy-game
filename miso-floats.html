@@ -181,20 +181,27 @@ const RAIN = Array.from({length:48}, ()=>({
   op:Math.random()*0.16+0.04,
 }));
 
-// ── Physics constants ─────────────────────────────────────────────────────────
-const GRAVITY  = 0.38;
-const FLAP_V   = -7.2;
-const PSPEED   = 2.5;
-const GAP      = 152;
-const PINTERVAL= 105;
+// ── Progressive difficulty ────────────────────────────────────────────────────
+// Fully eased in by score 90. Start: slow, floaty, wide gaps. End: classic feel.
+function lerp(a,b,t){ return a+(b-a)*Math.min(1,t); }
+function diff() {
+  const t = Math.min(1, score / 90);
+  return {
+    gravity:   lerp(0.20, 0.40, t),
+    flapV:     lerp(-5.6, -7.3, t),
+    pspeed:    lerp(1.3,  3.0,  t),
+    gap:       lerp(200,  128,  t),
+    pinterval: Math.round(lerp(138, 90, t)),
+  };
+}
 
 // ── Cat state ─────────────────────────────────────────────────────────────────
 const CAT = {
   x:100, y:H/2, vy:0, angle:0, w:44, h:32,
   reset(){ this.y=H/2; this.vy=0; this.angle=0; },
-  flap(){ this.vy=FLAP_V; sfxFlap(); },
-  update(){
-    this.vy += GRAVITY;
+  flap(fv){ this.vy=fv; sfxFlap(); },
+  update(grav){
+    this.vy += grav;
     this.y  += this.vy;
     this.angle = Math.max(-0.45, Math.min(1.1, this.vy*0.055));
   },
@@ -217,18 +224,37 @@ function makeStack(totalH) {
 }
 
 function makePipe() {
-  const gy = 128+Math.random()*(H-280);
+  const d = diff();
+  const margin = 95;
+  const gapY = d.gap/2 + margin + Math.random()*(H - d.gap - margin*2);
   return {
-    x: W+12, gapY:gy, w:50, passed:false,
-    top: makeStack(gy),
-    bot: makeStack(H-gy-GAP),
+    x: W+12, gapY, gap:d.gap, w:50, passed:false,
+    top: makeStack(gapY - d.gap/2),
+    bot: makeStack(H - gapY - d.gap/2),
   };
 }
 
-let pipes=[], ptick=Math.round(PINTERVAL*0.65);
+let pipes=[], ptick=88; // ~64% of starting pinterval so first pipe comes soon
 let score=0, best=+(localStorage.getItem('mf_best')||0);
 let mode='idle'; // idle | play | dead
 let tick=0, deadTimer=0;
+
+// ── Milestone messages ────────────────────────────────────────────────────────
+const MILESTONES = [
+  '',
+  'still floating~',
+  'miso is vibing~',
+  "the books don't mind~",
+  'just drift~',
+  'somewhere between awake and asleep~',
+  'miso knows the way~',
+  'the rain sounds nice~',
+  'this apartment is infinite~',
+  'even the stars are watching~',
+  'one hundred drifts. wow.~',
+];
+let toast = { text:'', age:0, show:false };
+const TOAST_DUR = 210;
 
 // ── Draw: background ──────────────────────────────────────────────────────────
 function drawBg() {
@@ -299,8 +325,8 @@ function drawStack(books, px, pw, startY, maxH) {
 }
 
 function drawPipe(p) {
-  const topH = p.gapY - GAP/2;
-  const botY = p.gapY + GAP/2;
+  const topH = p.gapY - p.gap/2;
+  const botY = p.gapY + p.gap/2;
 
   drawStack(p.top, p.x, p.w, 0,    topH);
   drawStack(p.bot, p.x, p.w, botY, H-botY);
@@ -469,24 +495,40 @@ function drawDead() {
   cx.fillText('z  z  z', W/2, H/2+80);
 }
 
+// ── Draw: milestone toast ─────────────────────────────────────────────────────
+function drawToast() {
+  if(!toast.show) return;
+  toast.age++;
+  const fade = toast.age < 35      ? toast.age/35 :
+               toast.age > TOAST_DUR-35 ? (TOAST_DUR-toast.age)/35 : 1;
+  if(fade <= 0){ toast.show=false; return; }
+  cx.globalAlpha = fade * 0.82;
+  cx.fillStyle   = TEAL;
+  cx.font        = 'italic 15px Georgia,serif';
+  cx.textAlign   = 'center';
+  cx.textBaseline= 'middle';
+  cx.fillText(toast.text, W/2, 72);
+  cx.globalAlpha = 1;
+}
+
 // ── Collision ─────────────────────────────────────────────────────────────────
 function hits(p) {
   const pad=5;
   const mx=CAT.x-CAT.w/2+pad, mw=CAT.w-pad*2;
   const my=CAT.y-CAT.h/2+pad, mh=CAT.h-pad*2;
-  const topH=p.gapY-GAP/2, botY=p.gapY+GAP/2;
+  const topH=p.gapY-p.gap/2, botY=p.gapY+p.gap/2;
   return mx+mw>p.x && mx<p.x+p.w && (my<topH || my+mh>botY);
 }
 
 // ── Input ─────────────────────────────────────────────────────────────────────
 function doFlap() {
   if(mode==='idle'){
-    mode='play'; CAT.flap();
+    mode='play'; CAT.flap(diff().flapV);
   } else if(mode==='play'){
-    CAT.flap();
+    CAT.flap(diff().flapV);
   } else if(mode==='dead' && deadTimer>42){
-    score=0; pipes=[]; ptick=Math.round(PINTERVAL*0.65);
-    CAT.reset(); mode='play'; CAT.flap();
+    score=0; pipes=[]; ptick=88; toast={text:'',age:0,show:false};
+    CAT.reset(); mode='play'; CAT.flap(diff().flapV);
   }
 }
 
@@ -505,17 +547,22 @@ function loop() {
   drawRain(mode==='play');
 
   if(mode==='play'){
-    CAT.update();
+    const d = diff();
+    CAT.update(d.gravity);
 
     ptick++;
-    if(ptick>=PINTERVAL){ pipes.push(makePipe()); ptick=0; }
+    if(ptick>=d.pinterval){ pipes.push(makePipe()); ptick=0; }
 
     pipes.forEach(p=>{
-      p.x-=PSPEED;
+      p.x-=d.pspeed;
       if(!p.passed && p.x+p.w<CAT.x){
         p.passed=true; score++;
         if(score>best){ best=score; localStorage.setItem('mf_best',best); }
         sfxScore();
+        if(score%10===0){
+          const mi = Math.min(score/10, MILESTONES.length-1);
+          toast = { text:MILESTONES[mi], age:0, show:true };
+        }
       }
     });
     pipes=pipes.filter(p=>p.x+p.w>-12);
@@ -536,7 +583,7 @@ function loop() {
   drawCat(CAT.x, CAT.y, CAT.angle);
 
   if(mode==='idle')      drawIdle();
-  else if(mode==='play') drawScore();
+  else if(mode==='play'){ drawScore(); drawToast(); }
   else                   drawDead();
 
   requestAnimationFrame(loop);
