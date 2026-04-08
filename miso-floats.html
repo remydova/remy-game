@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>miso floats</title>
+<meta name="description" content="help miso the tabby cat float through remy's apartment">
+<meta name="theme-color" content="#0c0c18">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="miso floats">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;background:#0c0c18;overflow:hidden;touch-action:none}
+body{display:flex;justify-content:center;align-items:center}
+canvas{display:block;cursor:pointer}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+// ── PWA manifest (inline blob) ────────────────────────────────────────────────
+(function(){
+  const m = {
+    name:'miso floats', short_name:'miso floats',
+    start_url:'.', display:'standalone',
+    background_color:'#0c0c18', theme_color:'#0c0c18',
+    description:"help miso the tabby cat float through remy's apartment"
+  };
+  const el = document.createElement('link');
+  el.rel = 'manifest';
+  el.href = URL.createObjectURL(new Blob([JSON.stringify(m)],{type:'application/manifest+json'}));
+  document.head.appendChild(el);
+})();
+
+// ── Canvas ────────────────────────────────────────────────────────────────────
+const cv = document.getElementById('c');
+const cx = cv.getContext('2d');
+const W = 400, H = 600;
+let sc = 1;
+
+function resize() {
+  sc = Math.min(window.innerWidth / W, window.innerHeight / H);
+  cv.width  = Math.round(W * sc);
+  cv.height = Math.round(H * sc);
+}
+resize();
+window.addEventListener('resize', resize);
+
+// ── Palette ───────────────────────────────────────────────────────────────────
+const BG    = '#0c0c18';
+const SURF  = '#13131f';
+const AMB   = '#d4956a';  // miso body
+const AMB2  = '#a06840';  // dark stripe
+const AMB3  = '#c07850';  // mid stripe
+const TEAL  = '#7fb5a0';  // books
+const TEAL2 = '#5a8c7a';  // book ledge / dark
+const LAV   = '#9b8bb4';  // accent / lav books
+const LAV2  = '#7a6894';
+const TEXT  = '#e8ddd0';
+const TEXTD = '#6a5d50';
+
+// ── Audio (Web Audio API — gentle tones) ─────────────────────────────────────
+let ac;
+function tone(freq, dur, vol=0.09, type='sine') {
+  try {
+    if (!ac) ac = new (window.AudioContext||window.webkitAudioContext)();
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.connect(g); g.connect(ac.destination);
+    o.type = type; o.frequency.value = freq;
+    g.gain.setValueAtTime(vol, ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + dur);
+    o.start(ac.currentTime); o.stop(ac.currentTime + dur);
+  } catch(_){}
+}
+const sfxFlap  = () => tone(420, 0.1, 0.06);
+const sfxScore = () => { tone(660,0.14,0.07); setTimeout(()=>tone(880,0.14,0.05),70); };
+const sfxDead  = () => {
+  tone(300,0.28,0.07);
+  setTimeout(()=>tone(220,0.35,0.06),160);
+  setTimeout(()=>tone(165,0.5, 0.04),360);
+};
+
+// ── Stars ─────────────────────────────────────────────────────────────────────
+const STARS = Array.from({length:72}, ()=>({
+  x:Math.random()*W, y:Math.random()*H,
+  r:Math.random()*1.4+0.3,
+  ph:Math.random()*Math.PI*2,
+  sp:Math.random()*0.022+0.008,
+}));
+
+// ── Rain streaks ──────────────────────────────────────────────────────────────
+const RAIN = Array.from({length:48}, ()=>({
+  x:Math.random()*W, y:Math.random()*H,
+  len:Math.random()*16+6,
+  spd:Math.random()*1.4+0.7,
+  op:Math.random()*0.16+0.04,
+}));
+
+// ── Physics constants ─────────────────────────────────────────────────────────
+const GRAVITY  = 0.38;
+const FLAP_V   = -7.2;
+const PSPEED   = 2.5;
+const GAP      = 152;
+const PINTERVAL= 105;
+
+// ── Cat state ─────────────────────────────────────────────────────────────────
+const CAT = {
+  x:100, y:H/2, vy:0, angle:0, w:44, h:32,
+  reset(){ this.y=H/2; this.vy=0; this.angle=0; },
+  flap(){ this.vy=FLAP_V; sfxFlap(); },
+  update(){
+    this.vy += GRAVITY;
+    this.y  += this.vy;
+    this.angle = Math.max(-0.45, Math.min(1.1, this.vy*0.055));
+  },
+};
+
+// ── Book-stack pipes ──────────────────────────────────────────────────────────
+const BCOLORS = [TEAL,TEAL2,LAV,LAV2,'#6a8c7c','#8a7ab2','#5e8875'];
+
+function makeStack(totalH) {
+  const books=[]; let h=0;
+  while(h < totalH+60){
+    books.push({
+      h: 16+Math.floor(Math.random()*28),
+      color: BCOLORS[Math.floor(Math.random()*BCOLORS.length)],
+      line: Math.random()>0.32,
+    });
+    h+=books[books.length-1].h;
+  }
+  return books;
+}
+
+function makePipe() {
+  const gy = 128+Math.random()*(H-280);
+  return {
+    x: W+12, gapY:gy, w:50, passed:false,
+    top: makeStack(gy),
+    bot: makeStack(H-gy-GAP),
+  };
+}
+
+let pipes=[], ptick=Math.round(PINTERVAL*0.65);
+let score=0, best=+(localStorage.getItem('mf_best')||0);
+let mode='idle'; // idle | play | dead
+let tick=0, deadTimer=0;
+
+// ── Draw: background ──────────────────────────────────────────────────────────
+function drawBg() {
+  cx.fillStyle = BG;
+  cx.fillRect(0,0,W,H);
+  // faint lavender glow at top
+  const g = cx.createRadialGradient(W/2,0,0,W/2,0,H*0.55);
+  g.addColorStop(0,'rgba(155,139,180,0.05)');
+  g.addColorStop(1,'rgba(0,0,0,0)');
+  cx.fillStyle=g; cx.fillRect(0,0,W,H);
+}
+
+function drawStars() {
+  STARS.forEach(s=>{
+    s.ph+=s.sp;
+    const a=(0.2+Math.sin(s.ph)*0.22).toFixed(2);
+    cx.fillStyle=`rgba(232,221,208,${a})`;
+    cx.beginPath(); cx.arc(s.x,s.y,s.r,0,Math.PI*2); cx.fill();
+  });
+}
+
+function drawRain(moving) {
+  RAIN.forEach(r=>{
+    if(moving){
+      r.x-=r.spd*0.38; r.y+=r.spd*2.3;
+      if(r.y>H+r.len){ r.y=-r.len; r.x=Math.random()*W; }
+      if(r.x<-4)     { r.x=W+4;   r.y=Math.random()*H; }
+    }
+    cx.strokeStyle=`rgba(127,181,160,${r.op})`;
+    cx.lineWidth=0.75;
+    cx.beginPath();
+    cx.moveTo(r.x,r.y);
+    cx.lineTo(r.x-r.len*0.24,r.y+r.len);
+    cx.stroke();
+  });
+}
+
+// ── Draw: book stacks ─────────────────────────────────────────────────────────
+function rr(x,y,w,h,r){
+  cx.beginPath();
+  cx.moveTo(x+r,y);
+  cx.lineTo(x+w-r,y); cx.arcTo(x+w,y,   x+w,y+r,  r);
+  cx.lineTo(x+w,y+h-r); cx.arcTo(x+w,y+h,x+w-r,y+h,r);
+  cx.lineTo(x+r,y+h); cx.arcTo(x,y+h,  x,y+h-r, r);
+  cx.lineTo(x,y+r); cx.arcTo(x,y,    x+r,y,   r);
+  cx.closePath();
+}
+
+function drawStack(books, px, pw, startY, maxH) {
+  let y=0;
+  for(const b of books){
+    if(y>=maxH) break;
+    const dh=Math.min(b.h, maxH-y);
+    cx.fillStyle=b.color;
+    cx.fillRect(px, startY+y, pw, dh);
+    // spine shadows
+    cx.fillStyle='rgba(0,0,0,0.2)';
+    cx.fillRect(px,      startY+y, 2,  dh);
+    cx.fillRect(px+pw-2, startY+y, 2,  dh);
+    // title lines
+    if(b.line && dh>11){
+      cx.fillStyle='rgba(255,255,255,0.09)';
+      cx.fillRect(px+5, startY+y+4, pw-10, 1.5);
+      if(dh>20) cx.fillRect(px+5, startY+y+9, pw-16, 1);
+    }
+    y+=b.h;
+  }
+}
+
+function drawPipe(p) {
+  const topH = p.gapY - GAP/2;
+  const botY = p.gapY + GAP/2;
+
+  drawStack(p.top, p.x, p.w, 0,    topH);
+  drawStack(p.bot, p.x, p.w, botY, H-botY);
+
+  // ledges
+  cx.fillStyle=TEAL2;
+  cx.fillRect(p.x-4, topH-8, p.w+8, 8);
+  cx.fillRect(p.x-4, botY,   p.w+8, 8);
+  // ledge highlight
+  cx.fillStyle='rgba(255,255,255,0.09)';
+  cx.fillRect(p.x-4, topH-8, p.w+8, 2);
+  cx.fillRect(p.x-4, botY,   p.w+8, 2);
+}
+
+// ── Draw: Miso the tabby cat ──────────────────────────────────────────────────
+function drawCat(x, y, angle) {
+  cx.save();
+  cx.translate(x,y);
+  cx.rotate(angle);
+  const hw=CAT.w/2, hh=CAT.h/2;
+
+  // body
+  cx.fillStyle=AMB;
+  rr(-hw,-hh,CAT.w,CAT.h,9);
+  cx.fill();
+
+  // tabby stripes (clipped to body)
+  cx.save();
+  rr(-hw,-hh,CAT.w,CAT.h,9); cx.clip();
+  cx.fillStyle=AMB3;
+  cx.fillRect(-hw+7,  -hh+1, 3.5, CAT.h-2);
+  cx.fillRect(-hw+15, -hh-1, 3,   CAT.h+2);
+  cx.fillRect(-hw+24, -hh+2, 3,   CAT.h-3);
+  cx.fillStyle=AMB2;
+  cx.fillRect(-hw+8,  -hh+2, 1.5, CAT.h-4);
+  cx.fillRect(-hw+16, -hh,   1.5, CAT.h);
+  cx.restore();
+
+  // ears
+  cx.fillStyle=AMB;
+  cx.beginPath(); cx.moveTo(-hw+2,-hh+2); cx.lineTo(-hw-4,-hh-13); cx.lineTo(-hw+13,-hh+1); cx.closePath(); cx.fill();
+  cx.beginPath(); cx.moveTo(-hw+20,-hh+1); cx.lineTo(-hw+28,-hh-13); cx.lineTo(-hw+35,-hh+2); cx.closePath(); cx.fill();
+  // inner ears
+  cx.fillStyle='#e09080';
+  cx.beginPath(); cx.moveTo(-hw+3,-hh+1); cx.lineTo(-hw-1,-hh-9); cx.lineTo(-hw+10,-hh+1); cx.closePath(); cx.fill();
+  cx.beginPath(); cx.moveTo(-hw+21,-hh+0); cx.lineTo(-hw+27,-hh-9); cx.lineTo(-hw+33,-hh+1); cx.closePath(); cx.fill();
+
+  // eyes
+  cx.fillStyle='#1a1a2e';
+  cx.beginPath(); cx.ellipse(-hw+10,-hh+12,3.5,4,0,0,Math.PI*2); cx.fill();
+  cx.beginPath(); cx.ellipse(-hw+25,-hh+12,3.5,4,0,0,Math.PI*2); cx.fill();
+  cx.fillStyle='rgba(255,255,255,0.78)';
+  cx.beginPath(); cx.arc(-hw+11.5,-hh+10,1.2,0,Math.PI*2); cx.fill();
+  cx.beginPath(); cx.arc(-hw+26.5,-hh+10,1.2,0,Math.PI*2); cx.fill();
+
+  // nose
+  cx.fillStyle='#d08070';
+  cx.beginPath();
+  cx.moveTo(-hw+17.5,-hh+18); cx.lineTo(-hw+14,-hh+15); cx.lineTo(-hw+21,-hh+15);
+  cx.closePath(); cx.fill();
+
+  // mouth
+  cx.strokeStyle='rgba(160,100,80,0.55)'; cx.lineWidth=0.8;
+  cx.beginPath(); cx.moveTo(-hw+17.5,-hh+18); cx.quadraticCurveTo(-hw+14,-hh+22,-hw+11,-hh+21); cx.stroke();
+  cx.beginPath(); cx.moveTo(-hw+17.5,-hh+18); cx.quadraticCurveTo(-hw+21,-hh+22,-hw+24,-hh+21); cx.stroke();
+
+  // whiskers
+  cx.strokeStyle='rgba(232,221,208,0.5)'; cx.lineWidth=0.9;
+  cx.beginPath(); cx.moveTo(-hw+13,-hh+16); cx.lineTo(-hw-8,-hh+13); cx.stroke();
+  cx.beginPath(); cx.moveTo(-hw+13,-hh+18); cx.lineTo(-hw-7,-hh+19); cx.stroke();
+  cx.beginPath(); cx.moveTo(-hw+22,-hh+16); cx.lineTo(-hw+44,-hh+13); cx.stroke();
+  cx.beginPath(); cx.moveTo(-hw+22,-hh+18); cx.lineTo(-hw+43,-hh+19); cx.stroke();
+
+  // tail
+  cx.strokeStyle=AMB; cx.lineWidth=4.5; cx.lineCap='round';
+  cx.beginPath();
+  cx.moveTo(hw-4,hh-4);
+  cx.bezierCurveTo(hw+12,hh+10, hw+22,hh, hw+16,hh-20);
+  cx.stroke();
+  cx.strokeStyle=AMB3; cx.lineWidth=2;
+  cx.beginPath();
+  cx.moveTo(hw-3,hh-4);
+  cx.bezierCurveTo(hw+10,hh+8, hw+20,hh, hw+14,hh-19);
+  cx.stroke();
+
+  cx.restore();
+}
+
+// ── Draw: HUD screens ─────────────────────────────────────────────────────────
+function drawScore() {
+  cx.fillStyle='rgba(232,221,208,0.88)';
+  cx.font='bold 30px Georgia,serif';
+  cx.textAlign='center'; cx.textBaseline='top';
+  cx.fillText(score, W/2, 22);
+}
+
+function drawIdle() {
+  cx.textAlign='center'; cx.textBaseline='middle';
+
+  cx.fillStyle=AMB;
+  cx.font='italic bold 38px Georgia,serif';
+  cx.fillText('miso floats', W/2, H/2-72);
+
+  cx.fillStyle=TEXTD;
+  cx.font='15px Georgia,serif';
+  cx.fillText("help miso drift through remy's apartment", W/2, H/2-36);
+
+  const pulse=0.5+Math.sin(tick*0.045)*0.42;
+  cx.globalAlpha=pulse;
+  cx.fillStyle=TEAL;
+  cx.font='italic 16px Georgia,serif';
+  cx.fillText('tap  ·  or press space', W/2, H/2+32);
+  cx.globalAlpha=1;
+
+  if(best>0){
+    cx.fillStyle=TEXTD;
+    cx.font='13px Georgia,serif';
+    cx.fillText(`best: ${best}`, W/2, H/2+66);
+  }
+
+  cx.fillStyle='rgba(106,93,80,0.42)';
+  cx.font='italic 11px Georgia,serif';
+  cx.fillText("it's okay to be you.", W/2, H-22);
+}
+
+function drawDead() {
+  // dim overlay
+  cx.fillStyle='rgba(12,12,24,0.72)';
+  cx.fillRect(0,0,W,H);
+
+  // card
+  const cw=268, ch=206, cx2=W/2-cw/2, cy2=H/2-ch/2;
+  cx.fillStyle=SURF; rr(cx2,cy2,cw,ch,14); cx.fill();
+  cx.strokeStyle=LAV; cx.lineWidth=1; rr(cx2,cy2,cw,ch,14); cx.stroke();
+
+  cx.textAlign='center'; cx.textBaseline='middle';
+
+  cx.fillStyle=AMB;
+  cx.font='italic bold 23px Georgia,serif';
+  cx.fillText('miso dozed off~', W/2, H/2-64);
+
+  cx.fillStyle=TEXT;
+  cx.font='16px Georgia,serif';
+  cx.fillText(`floated past ${score} stack${score!==1?'s':''}`, W/2, H/2-28);
+
+  if(score>0 && score>=best){
+    cx.fillStyle=TEAL;
+    cx.font='italic 14px Georgia,serif';
+    cx.fillText('new best  ✦', W/2, H/2+2);
+  } else if(best>0){
+    cx.fillStyle=TEXTD;
+    cx.font='13px Georgia,serif';
+    cx.fillText(`best: ${best}`, W/2, H/2+4);
+  }
+
+  if(deadTimer>42){
+    cx.globalAlpha=0.55+Math.sin(tick*0.05)*0.4;
+    cx.fillStyle=TEAL;
+    cx.font='italic 15px Georgia,serif';
+    cx.fillText('tap or space to float again', W/2, H/2+48);
+    cx.globalAlpha=1;
+  }
+
+  cx.fillStyle=LAV;
+  cx.font=`italic ${15+Math.sin(tick*0.04)*2}px Georgia,serif`;
+  cx.fillText('z  z  z', W/2, H/2+80);
+}
+
+// ── Collision ─────────────────────────────────────────────────────────────────
+function hits(p) {
+  const pad=5;
+  const mx=CAT.x-CAT.w/2+pad, mw=CAT.w-pad*2;
+  const my=CAT.y-CAT.h/2+pad, mh=CAT.h-pad*2;
+  const topH=p.gapY-GAP/2, botY=p.gapY+GAP/2;
+  return mx+mw>p.x && mx<p.x+p.w && (my<topH || my+mh>botY);
+}
+
+// ── Input ─────────────────────────────────────────────────────────────────────
+function doFlap() {
+  if(mode==='idle'){
+    mode='play'; CAT.flap();
+  } else if(mode==='play'){
+    CAT.flap();
+  } else if(mode==='dead' && deadTimer>42){
+    score=0; pipes=[]; ptick=Math.round(PINTERVAL*0.65);
+    CAT.reset(); mode='play'; CAT.flap();
+  }
+}
+
+window.addEventListener('keydown', e=>{
+  if(e.code==='Space'||e.code==='ArrowUp'){ e.preventDefault(); doFlap(); }
+});
+cv.addEventListener('pointerdown', e=>{ e.preventDefault(); doFlap(); });
+
+// ── Game loop ─────────────────────────────────────────────────────────────────
+function loop() {
+  tick++;
+  cx.setTransform(sc,0,0,sc,0,0);
+
+  drawBg();
+  drawStars();
+  drawRain(mode==='play');
+
+  if(mode==='play'){
+    CAT.update();
+
+    ptick++;
+    if(ptick>=PINTERVAL){ pipes.push(makePipe()); ptick=0; }
+
+    pipes.forEach(p=>{
+      p.x-=PSPEED;
+      if(!p.passed && p.x+p.w<CAT.x){
+        p.passed=true; score++;
+        if(score>best){ best=score; localStorage.setItem('mf_best',best); }
+        sfxScore();
+      }
+    });
+    pipes=pipes.filter(p=>p.x+p.w>-12);
+
+    if(CAT.y>H+20 || CAT.y<-20 || pipes.some(hits)){
+      mode='dead'; deadTimer=0; sfxDead();
+    }
+  }
+
+  if(mode==='idle'){
+    CAT.y = H/2+10+Math.sin(tick*0.032)*13;
+    CAT.angle = Math.sin(tick*0.032)*0.08;
+  }
+
+  if(mode==='dead') deadTimer++;
+
+  pipes.forEach(drawPipe);
+  drawCat(CAT.x, CAT.y, CAT.angle);
+
+  if(mode==='idle')      drawIdle();
+  else if(mode==='play') drawScore();
+  else                   drawDead();
+
+  requestAnimationFrame(loop);
+}
+
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
