@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>float with miso~</title>
-<meta name="description" content="a quiet place to drift with miso the tabby cat">
+<title>miso floats~</title>
+<meta name="description" content="float with miso through the book stacks">
 <meta name="theme-color" content="#0c0c18">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -20,7 +20,7 @@ canvas{display:block;cursor:pointer}
 <body>
 <canvas id="c"></canvas>
 <script>
-// ── PWA icon (canvas-generated) ───────────────────────────────────────────────
+// ── PWA icon ──────────────────────────────────────────────────────────────────
 function makeMisoIcon(size) {
   const ic = document.createElement('canvas');
   ic.width = ic.height = size;
@@ -85,7 +85,6 @@ window.addEventListener('resize', resize);
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 const BG   = '#0c0c18';
-const SURF = '#13131f';
 const AMB  = '#d4956a';
 const AMB2 = '#a06840';
 const AMB3 = '#c07850';
@@ -110,10 +109,28 @@ function tone(freq, dur, vol=0.08, type='sine') {
   } catch(_){}
 }
 
-// Soft upward bob chime — single gentle note
-const sfxBob = () => tone(528, 0.2, 0.032);
+// Gentle upward bob chime
+const sfxFlap = () => tone(528, 0.2, 0.032);
 
-// Ambient lofi pad drone — C2/Eb2/G2 minor chord
+// Soft descending "boing" on bump
+function sfxBoing() {
+  try {
+    if(!ac) ac = new (window.AudioContext||window.webkitAudioContext)();
+    const o=ac.createOscillator(), g=ac.createGain();
+    o.connect(g); g.connect(ac.destination);
+    o.type='sine';
+    o.frequency.setValueAtTime(380, ac.currentTime);
+    o.frequency.exponentialRampToValueAtTime(180, ac.currentTime+0.28);
+    g.gain.setValueAtTime(0.052, ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime+0.28);
+    o.start(ac.currentTime); o.stop(ac.currentTime+0.28);
+  } catch(_){}
+}
+
+// Tiny chime on scoring
+const sfxPoint = () => tone(660, 0.12, 0.020);
+
+// Ambient drone — C2/Eb2/G2 minor chord
 let droneStarted = false;
 function startDrone() {
   if(droneStarted) return;
@@ -132,7 +149,7 @@ function startDrone() {
   } catch(_){}
 }
 
-// ── Parallax cloud layers ─────────────────────────────────────────────────────
+// ── Parallax clouds ───────────────────────────────────────────────────────────
 const CLOUDS_S = Array.from({length:7}, ()=>({
   x:Math.random()*W, y:Math.random()*H,
   r:50+Math.random()*70, op:Math.random()*0.06+0.025, spd:0.10+Math.random()*0.06,
@@ -150,7 +167,7 @@ const STARS = Array.from({length:72}, ()=>({
   sp:Math.random()*0.022+0.008,
 }));
 
-// ── Rain streaks ──────────────────────────────────────────────────────────────
+// ── Rain ──────────────────────────────────────────────────────────────────────
 const RAIN = Array.from({length:48}, ()=>({
   x:Math.random()*W, y:Math.random()*H,
   len:Math.random()*16+6,
@@ -158,28 +175,10 @@ const RAIN = Array.from({length:48}, ()=>({
   op:Math.random()*0.16+0.04,
 }));
 
-// ── Floating scenery — books ──────────────────────────────────────────────────
+// ── Book colors ───────────────────────────────────────────────────────────────
 const BCOLORS = [TEAL,TEAL2,LAV,LAV2,'#6a8c7c','#8a7ab2','#5e8875'];
 
-function makeSceneryBook() {
-  const n = 1+Math.floor(Math.random()*3); // 1-3 books stacked
-  return {
-    x: W+30,
-    y: 50+Math.random()*(H-100),
-    spd: 0.28+Math.random()*0.5,
-    op: 0.32+Math.random()*0.52,
-    books: Array.from({length:n}, ()=>({
-      w: 36+Math.floor(Math.random()*20),
-      h: 16+Math.floor(Math.random()*22),
-      color: BCOLORS[Math.floor(Math.random()*BCOLORS.length)],
-      rot: (Math.random()-0.5)*0.12,
-    })),
-  };
-}
-
-let sceneryBooks = [], bookTimer = 0, nextBookIn = 80;
-
-// ── Floating scenery — drifters (notes, tiny stars, flowers) ─────────────────
+// ── Drifters (notes, stars, flowers) ─────────────────────────────────────────
 const NOTE_CHARS = ['♩','♪','♫','♬'];
 
 function makeDrifter(scattered) {
@@ -190,8 +189,8 @@ function makeDrifter(scattered) {
     x: scattered ? Math.random()*W : W+20,
     y: 20+Math.random()*(H-40),
     spd: 0.10+Math.random()*0.38,
-    op: 0.07+Math.random()*0.20,
-    sz: 0.5+Math.random()*1.1,
+    op: 0.07+Math.random()*0.18,
+    sz: 0.5+Math.random()*1.0,
     rot: Math.random()*Math.PI*2,
     rotSpd: (Math.random()-0.5)*0.007,
     bobPh: Math.random()*Math.PI*2,
@@ -200,29 +199,228 @@ function makeDrifter(scattered) {
   };
 }
 
-// Start scattered so screen isn't empty at launch
 const DRIFTERS = Array.from({length:20}, ()=>makeDrifter(true));
 
-// ── Miso spring-float physics ─────────────────────────────────────────────────
+// ── Book stack (pipe) helpers ─────────────────────────────────────────────────
+const PIPE_W = 68;
+const HIT_R  = 12; // Miso collision radius (forgiving)
+
+function makeBookLayout(colH) {
+  const books = [];
+  let y = 0;
+  while(y < colH + 40) {
+    const bh = 16 + Math.floor(Math.random()*16);
+    const bw = PIPE_W - Math.floor(Math.random()*12);
+    books.push({
+      dy: y, bw, bh,
+      color: BCOLORS[Math.floor(Math.random()*BCOLORS.length)],
+      rot: (Math.random()-0.5)*0.04,
+    });
+    y += bh + 1;
+  }
+  return books;
+}
+
+function makePipe(score) {
+  // gap starts very wide (280px), narrows slowly, never below 210px
+  const gap = Math.max(210, 280 - score * 0.8);
+  const margin = 55;
+  const gapCenter = margin + gap/2 + Math.random() * (H - margin*2 - gap);
+  const topH = gapCenter - gap/2;
+  const botY = gapCenter + gap/2;
+  return {
+    x: W + PIPE_W,
+    topH, botY, gap,
+    scored: false,
+    topBooks: makeBookLayout(topH),
+    botBooks: makeBookLayout(H - botY),
+  };
+}
+
+// ── Draw helpers ──────────────────────────────────────────────────────────────
+function rr(x,y,w,h,r){
+  cx.beginPath();
+  cx.moveTo(x+r,y);
+  cx.lineTo(x+w-r,y); cx.arcTo(x+w,y,   x+w,y+r,  r);
+  cx.lineTo(x+w,y+h-r); cx.arcTo(x+w,y+h,x+w-r,y+h,r);
+  cx.lineTo(x+r,y+h); cx.arcTo(x,y+h,  x,y+h-r, r);
+  cx.lineTo(x,y+r); cx.arcTo(x,y,    x+r,y,   r);
+  cx.closePath();
+}
+
+function drawBook(bx,by,bw,bh,color,rot) {
+  cx.save();
+  cx.translate(bx+bw/2, by+bh/2); cx.rotate(rot||0);
+  cx.fillStyle=color; cx.fillRect(-bw/2,-bh/2,bw,bh);
+  cx.fillStyle='rgba(0,0,0,0.22)'; cx.fillRect(-bw/2,-bh/2,7,bh);
+  cx.fillStyle='rgba(255,255,255,0.07)'; cx.fillRect(-bw/2+1,-bh/2,1,bh);
+  cx.fillStyle='rgba(232,221,208,0.13)'; cx.fillRect(bw/2-4,-bh/2+1,3,bh-2);
+  cx.fillStyle='rgba(255,255,255,0.11)'; cx.fillRect(-bw/2+10,-bh/2+5,bw-16,1.5);
+  if(bh>24) cx.fillRect(-bw/2+10,-bh/2+11,bw-22,1);
+  cx.strokeStyle='rgba(0,0,0,0.12)'; cx.lineWidth=0.6;
+  cx.strokeRect(-bw/2,-bh/2,bw,bh);
+  cx.restore();
+}
+
+function drawPipe(pipe) {
+  // top column — clip to top section
+  cx.save();
+  cx.beginPath(); cx.rect(pipe.x, 0, PIPE_W, pipe.topH); cx.clip();
+  pipe.topBooks.forEach(bk => {
+    drawBook(pipe.x+(PIPE_W-bk.bw)/2, bk.dy, bk.bw, bk.bh, bk.color, bk.rot);
+  });
+  cx.restore();
+  // bottom column
+  cx.save();
+  cx.beginPath(); cx.rect(pipe.x, pipe.botY, PIPE_W, H-pipe.botY); cx.clip();
+  pipe.botBooks.forEach(bk => {
+    drawBook(pipe.x+(PIPE_W-bk.bw)/2, pipe.botY+bk.dy, bk.bw, bk.bh, bk.color, bk.rot);
+  });
+  cx.restore();
+}
+
+// ── Miso ──────────────────────────────────────────────────────────────────────
 const CAT = {
-  x:100, y:H/2, vy:0, angle:0, w:44, h:32,
-  bob() {
-    this.vy = -3.6;
-    sfxBob();
-  },
+  x: 90, y: H/2, vy: 0, angle: 0, w: 44, h: 32,
+  inv: 0, // invincibility frames after bounce
+
+  flap() { this.vy = -4.2; sfxFlap(); },
+
   update() {
-    const spring = (H/2 - this.y) * 0.006; // gentle pull toward center
-    this.vy = (this.vy + spring) * 0.96;    // soft damping
-    this.y += this.vy;
-    this.angle = Math.max(-0.28, Math.min(0.28, this.vy*0.055));
+    this.vy += 0.16;                         // gravity
+    this.vy += (H/2 - this.y) * 0.004;      // gentle spring toward center
+    this.vy  = Math.min(this.vy, 5.5);       // terminal velocity
+    this.y  += this.vy;
+    // soft bounce off edges
+    if(this.y < 16)   { this.y = 16;   this.vy =  Math.abs(this.vy) * 0.3; }
+    if(this.y > H-16) { this.y = H-16; this.vy = -Math.abs(this.vy) * 0.3; }
+    this.angle = Math.max(-0.38, Math.min(0.52, this.vy * 0.065));
+    if(this.inv > 0) this.inv--;
   },
 };
 
-// ── State ─────────────────────────────────────────────────────────────────────
-let mode = 'idle'; // idle | floating
-let tick = 0;
+function drawCat(x, y, angle, flash) {
+  cx.save();
+  if(flash) cx.globalAlpha = 0.42;
+  cx.translate(x,y);
+  cx.rotate(angle);
+  cx.scale(-1,1);
+  const hw=CAT.w/2, hh=CAT.h/2;
 
-// ── Draw: background ──────────────────────────────────────────────────────────
+  cx.fillStyle=AMB; rr(-hw,-hh,CAT.w,CAT.h,9); cx.fill();
+
+  cx.save();
+  rr(-hw,-hh,CAT.w,CAT.h,9); cx.clip();
+  cx.fillStyle=AMB3;
+  cx.fillRect(-hw+7,-hh+1,3.5,CAT.h-2); cx.fillRect(-hw+15,-hh-1,3,CAT.h+2); cx.fillRect(-hw+24,-hh+2,3,CAT.h-3);
+  cx.fillStyle=AMB2;
+  cx.fillRect(-hw+8,-hh+2,1.5,CAT.h-4); cx.fillRect(-hw+16,-hh,1.5,CAT.h);
+  cx.restore();
+
+  cx.fillStyle=AMB;
+  cx.beginPath(); cx.moveTo(-hw+2,-hh+2); cx.lineTo(-hw-4,-hh-13); cx.lineTo(-hw+13,-hh+1); cx.closePath(); cx.fill();
+  cx.beginPath(); cx.moveTo(-hw+20,-hh+1); cx.lineTo(-hw+28,-hh-13); cx.lineTo(-hw+35,-hh+2); cx.closePath(); cx.fill();
+  cx.fillStyle='#e09080';
+  cx.beginPath(); cx.moveTo(-hw+3,-hh+1); cx.lineTo(-hw-1,-hh-9); cx.lineTo(-hw+10,-hh+1); cx.closePath(); cx.fill();
+  cx.beginPath(); cx.moveTo(-hw+21,-hh+0); cx.lineTo(-hw+27,-hh-9); cx.lineTo(-hw+33,-hh+1); cx.closePath(); cx.fill();
+
+  cx.fillStyle='#1a1a2e';
+  cx.beginPath(); cx.ellipse(-hw+10,-hh+12,3.5,4,0,0,Math.PI*2); cx.fill();
+  cx.beginPath(); cx.ellipse(-hw+25,-hh+12,3.5,4,0,0,Math.PI*2); cx.fill();
+  cx.fillStyle='rgba(255,255,255,0.78)';
+  cx.beginPath(); cx.arc(-hw+11.5,-hh+10,1.2,0,Math.PI*2); cx.fill();
+  cx.beginPath(); cx.arc(-hw+26.5,-hh+10,1.2,0,Math.PI*2); cx.fill();
+
+  cx.fillStyle='#d08070';
+  cx.beginPath(); cx.moveTo(-hw+17.5,-hh+18); cx.lineTo(-hw+14,-hh+15); cx.lineTo(-hw+21,-hh+15); cx.closePath(); cx.fill();
+  cx.strokeStyle='rgba(160,100,80,0.55)'; cx.lineWidth=0.8;
+  cx.beginPath(); cx.moveTo(-hw+17.5,-hh+18); cx.quadraticCurveTo(-hw+14,-hh+22,-hw+11,-hh+21); cx.stroke();
+  cx.beginPath(); cx.moveTo(-hw+17.5,-hh+18); cx.quadraticCurveTo(-hw+21,-hh+22,-hw+24,-hh+21); cx.stroke();
+
+  cx.strokeStyle='rgba(232,221,208,0.5)'; cx.lineWidth=0.9;
+  cx.beginPath(); cx.moveTo(-hw+13,-hh+16); cx.lineTo(-hw-8,-hh+13); cx.stroke();
+  cx.beginPath(); cx.moveTo(-hw+13,-hh+18); cx.lineTo(-hw-7,-hh+19); cx.stroke();
+  cx.beginPath(); cx.moveTo(-hw+22,-hh+16); cx.lineTo(-hw+44,-hh+13); cx.stroke();
+  cx.beginPath(); cx.moveTo(-hw+22,-hh+18); cx.lineTo(-hw+43,-hh+19); cx.stroke();
+
+  cx.strokeStyle=AMB; cx.lineWidth=4.5; cx.lineCap='round';
+  cx.beginPath(); cx.moveTo(hw-4,hh-4); cx.bezierCurveTo(hw+12,hh+10,hw+22,hh,hw+16,hh-20); cx.stroke();
+  cx.strokeStyle=AMB3; cx.lineWidth=2;
+  cx.beginPath(); cx.moveTo(hw-3,hh-4); cx.bezierCurveTo(hw+10,hh+8,hw+20,hh,hw+14,hh-19); cx.stroke();
+
+  cx.restore();
+}
+
+// ── HUD & toasts ──────────────────────────────────────────────────────────────
+const MILESTONE_MSGS = {
+  10:  "still drifting~",
+  20:  "miso approves~",
+  30:  "soft and steady~",
+  40:  "like rain on a window~",
+  50:  "still here~",
+  60:  "miso is proud of you~",
+  70:  "you belong here~",
+  80:  "this is your space~",
+  90:  "almost a hundred~",
+  100: "a hundred quiet drifts~",
+};
+
+let toast = null;
+
+function showToast(msg) {
+  toast = { msg, life: 210, maxLife: 210 };
+}
+
+function drawHUD(score) {
+  cx.textAlign='center'; cx.textBaseline='top';
+  cx.fillStyle='rgba(155,139,180,0.5)';
+  cx.font='italic 11px Georgia,serif';
+  cx.fillText('drifts~', W/2, 12);
+  cx.fillStyle='rgba(232,221,208,0.72)';
+  cx.font='bold 22px Georgia,serif';
+  cx.fillText(score, W/2, 25);
+
+  if(toast) {
+    toast.life--;
+    if(toast.life <= 0) { toast = null; }
+    else {
+      const a = Math.min(1, toast.life/30, (toast.maxLife - toast.life)/20);
+      cx.save();
+      cx.globalAlpha = a;
+      cx.textAlign='center'; cx.textBaseline='middle';
+      cx.fillStyle = AMB;
+      cx.font = 'italic 19px Georgia,serif';
+      cx.fillText(toast.msg, W/2, H/2 - 105);
+      cx.restore();
+    }
+  }
+}
+
+// ── Idle screen ───────────────────────────────────────────────────────────────
+function drawIdle() {
+  cx.textAlign='center'; cx.textBaseline='middle';
+
+  cx.fillStyle=AMB;
+  cx.font='italic bold 34px Georgia,serif';
+  cx.fillText('miso floats~', W/2, H/2-72);
+
+  cx.fillStyle=TEXTD;
+  cx.font='14px Georgia,serif';
+  cx.fillText('guide miso through the book stacks', W/2, H/2-38);
+
+  const pulse = 0.5 + Math.sin(tick*0.045)*0.42;
+  cx.globalAlpha = pulse;
+  cx.fillStyle=TEAL;
+  cx.font='italic 16px Georgia,serif';
+  cx.fillText('tap  ·  or press space', W/2, H/2+32);
+  cx.globalAlpha = 1;
+
+  cx.fillStyle='rgba(106,93,80,0.4)';
+  cx.font='italic 11px Georgia,serif';
+  cx.fillText("it's okay to be you.", W/2, H-22);
+}
+
+// ── Background layers ─────────────────────────────────────────────────────────
 function drawBg() {
   cx.fillStyle = BG; cx.fillRect(0,0,W,H);
   const g = cx.createRadialGradient(W/2,0,0,W/2,0,H*0.55);
@@ -268,46 +466,6 @@ function drawParallax(moving) {
   });
 }
 
-// ── Draw: rounded rect helper ─────────────────────────────────────────────────
-function rr(x,y,w,h,r){
-  cx.beginPath();
-  cx.moveTo(x+r,y);
-  cx.lineTo(x+w-r,y); cx.arcTo(x+w,y,   x+w,y+r,  r);
-  cx.lineTo(x+w,y+h-r); cx.arcTo(x+w,y+h,x+w-r,y+h,r);
-  cx.lineTo(x+r,y+h); cx.arcTo(x,y+h,  x,y+h-r, r);
-  cx.lineTo(x,y+r); cx.arcTo(x,y,    x+r,y,   r);
-  cx.closePath();
-}
-
-// ── Draw: single book ─────────────────────────────────────────────────────────
-function drawBook(bx,by,bw,bh,color,rot) {
-  cx.save();
-  cx.translate(bx+bw/2, by+bh/2); cx.rotate(rot||0);
-  cx.fillStyle=color; cx.fillRect(-bw/2,-bh/2,bw,bh);
-  cx.fillStyle='rgba(0,0,0,0.22)'; cx.fillRect(-bw/2,-bh/2,7,bh);
-  cx.fillStyle='rgba(255,255,255,0.07)'; cx.fillRect(-bw/2+1,-bh/2,1,bh);
-  cx.fillStyle='rgba(232,221,208,0.13)'; cx.fillRect(bw/2-4,-bh/2+1,3,bh-2);
-  cx.fillStyle='rgba(255,255,255,0.11)'; cx.fillRect(-bw/2+10,-bh/2+5,bw-16,1.5);
-  if(bh>24) cx.fillRect(-bw/2+10,-bh/2+11,bw-22,1);
-  cx.strokeStyle='rgba(0,0,0,0.12)'; cx.lineWidth=0.6;
-  cx.strokeRect(-bw/2,-bh/2,bw,bh);
-  cx.restore();
-}
-
-// ── Draw: scenery book cluster ────────────────────────────────────────────────
-function drawSceneryBooks(sb) {
-  cx.save();
-  cx.globalAlpha = sb.op;
-  const totalH = sb.books.reduce((s,bk)=>s+bk.h+1,0)-1;
-  let ty = sb.y - totalH/2;
-  for(const bk of sb.books){
-    drawBook(sb.x - bk.w/2, ty, bk.w, bk.h, bk.color, bk.rot);
-    ty += bk.h+1;
-  }
-  cx.restore();
-}
-
-// ── Draw: drifting elements (notes, tiny stars, flowers) ─────────────────────
 function drawDrifter(d) {
   d.bobPh += d.bobSpd;
   d.rot   += d.rotSpd;
@@ -316,7 +474,6 @@ function drawDrifter(d) {
   cx.globalAlpha = d.op;
   cx.translate(d.x, d.y+dy);
   cx.rotate(d.rot);
-
   if(d.type==='note'){
     cx.fillStyle=LAV;
     cx.font=`italic ${Math.round(13*d.sz)}px Georgia,serif`;
@@ -328,7 +485,7 @@ function drawDrifter(d) {
     cx.beginPath(); cx.arc(0,0,sr*0.55,0,Math.PI*2); cx.fill();
     cx.fillStyle=`rgba(232,221,208,0.55)`;
     cx.fillRect(-0.6,-sr,1.2,sr*2); cx.fillRect(-sr,-0.6,sr*2,1.2);
-  } else { // flower
+  } else {
     const r=3.2*d.sz, pr=1.6*d.sz;
     cx.fillStyle=TEXTD;
     for(let i=0;i<5;i++){
@@ -341,144 +498,122 @@ function drawDrifter(d) {
   cx.restore();
 }
 
-// ── Draw: Miso the tabby cat ──────────────────────────────────────────────────
-function drawCat(x, y, angle) {
-  cx.save();
-  cx.translate(x,y);
-  cx.rotate(angle);
-  cx.scale(-1,1);
-  const hw=CAT.w/2, hh=CAT.h/2;
+// ── Game state ────────────────────────────────────────────────────────────────
+let mode = 'idle'; // 'idle' | 'playing'
+let score = 0;
+let pipes = [];
+let pipeTimer = 0;
+let tick = 0;
 
-  cx.fillStyle=AMB; rr(-hw,-hh,CAT.w,CAT.h,9); cx.fill();
+function pipeSpeed()    { return Math.min(1.9, 1.3 + score * 0.012); }
+function pipeInterval() { return Math.max(120, 150 - score * 0.5); }
 
-  cx.save();
-  rr(-hw,-hh,CAT.w,CAT.h,9); cx.clip();
-  cx.fillStyle=AMB3;
-  cx.fillRect(-hw+7,-hh+1,3.5,CAT.h-2); cx.fillRect(-hw+15,-hh-1,3,CAT.h+2); cx.fillRect(-hw+24,-hh+2,3,CAT.h-3);
-  cx.fillStyle=AMB2;
-  cx.fillRect(-hw+8,-hh+2,1.5,CAT.h-4); cx.fillRect(-hw+16,-hh,1.5,CAT.h);
-  cx.restore();
-
-  cx.fillStyle=AMB;
-  cx.beginPath(); cx.moveTo(-hw+2,-hh+2); cx.lineTo(-hw-4,-hh-13); cx.lineTo(-hw+13,-hh+1); cx.closePath(); cx.fill();
-  cx.beginPath(); cx.moveTo(-hw+20,-hh+1); cx.lineTo(-hw+28,-hh-13); cx.lineTo(-hw+35,-hh+2); cx.closePath(); cx.fill();
-  cx.fillStyle='#e09080';
-  cx.beginPath(); cx.moveTo(-hw+3,-hh+1); cx.lineTo(-hw-1,-hh-9); cx.lineTo(-hw+10,-hh+1); cx.closePath(); cx.fill();
-  cx.beginPath(); cx.moveTo(-hw+21,-hh+0); cx.lineTo(-hw+27,-hh-9); cx.lineTo(-hw+33,-hh+1); cx.closePath(); cx.fill();
-
-  cx.fillStyle='#1a1a2e';
-  cx.beginPath(); cx.ellipse(-hw+10,-hh+12,3.5,4,0,0,Math.PI*2); cx.fill();
-  cx.beginPath(); cx.ellipse(-hw+25,-hh+12,3.5,4,0,0,Math.PI*2); cx.fill();
-  cx.fillStyle='rgba(255,255,255,0.78)';
-  cx.beginPath(); cx.arc(-hw+11.5,-hh+10,1.2,0,Math.PI*2); cx.fill();
-  cx.beginPath(); cx.arc(-hw+26.5,-hh+10,1.2,0,Math.PI*2); cx.fill();
-
-  cx.fillStyle='#d08070';
-  cx.beginPath(); cx.moveTo(-hw+17.5,-hh+18); cx.lineTo(-hw+14,-hh+15); cx.lineTo(-hw+21,-hh+15); cx.closePath(); cx.fill();
-
-  cx.strokeStyle='rgba(160,100,80,0.55)'; cx.lineWidth=0.8;
-  cx.beginPath(); cx.moveTo(-hw+17.5,-hh+18); cx.quadraticCurveTo(-hw+14,-hh+22,-hw+11,-hh+21); cx.stroke();
-  cx.beginPath(); cx.moveTo(-hw+17.5,-hh+18); cx.quadraticCurveTo(-hw+21,-hh+22,-hw+24,-hh+21); cx.stroke();
-
-  cx.strokeStyle='rgba(232,221,208,0.5)'; cx.lineWidth=0.9;
-  cx.beginPath(); cx.moveTo(-hw+13,-hh+16); cx.lineTo(-hw-8,-hh+13); cx.stroke();
-  cx.beginPath(); cx.moveTo(-hw+13,-hh+18); cx.lineTo(-hw-7,-hh+19); cx.stroke();
-  cx.beginPath(); cx.moveTo(-hw+22,-hh+16); cx.lineTo(-hw+44,-hh+13); cx.stroke();
-  cx.beginPath(); cx.moveTo(-hw+22,-hh+18); cx.lineTo(-hw+43,-hh+19); cx.stroke();
-
-  cx.strokeStyle=AMB; cx.lineWidth=4.5; cx.lineCap='round';
-  cx.beginPath(); cx.moveTo(hw-4,hh-4); cx.bezierCurveTo(hw+12,hh+10,hw+22,hh,hw+16,hh-20); cx.stroke();
-  cx.strokeStyle=AMB3; cx.lineWidth=2;
-  cx.beginPath(); cx.moveTo(hw-3,hh-4); cx.bezierCurveTo(hw+10,hh+8,hw+20,hh,hw+14,hh-19); cx.stroke();
-
-  cx.restore();
+function doFlap() {
+  if(mode === 'idle') {
+    mode = 'playing';
+    startDrone();
+    pipeTimer = -60; // brief grace period before first pipe
+  }
+  CAT.flap();
 }
 
-// ── Draw: title screen ────────────────────────────────────────────────────────
-function drawIdle() {
-  cx.textAlign='center'; cx.textBaseline='middle';
-
-  cx.fillStyle=AMB;
-  cx.font='italic bold 34px Georgia,serif';
-  cx.fillText('float with miso~', W/2, H/2-72);
-
-  cx.fillStyle=TEXTD;
-  cx.font='14px Georgia,serif';
-  cx.fillText('a quiet place to drift', W/2, H/2-38);
-
-  const pulse=0.5+Math.sin(tick*0.045)*0.42;
-  cx.globalAlpha=pulse;
-  cx.fillStyle=TEAL;
-  cx.font='italic 16px Georgia,serif';
-  cx.fillText('tap  ·  or press space', W/2, H/2+32);
-  cx.globalAlpha=1;
-
-  cx.fillStyle='rgba(106,93,80,0.4)';
-  cx.font='italic 11px Georgia,serif';
-  cx.fillText("it's okay to be you.", W/2, H-22);
-}
-
-// ── Input ─────────────────────────────────────────────────────────────────────
-function doBob() {
-  if(mode==='idle'){ mode='floating'; startDrone(); }
-  CAT.bob();
-}
-
-window.addEventListener('keydown', e=>{
-  if(e.code==='Space'||e.code==='ArrowUp'){ e.preventDefault(); doBob(); }
-});
-cv.addEventListener('pointerdown', e=>{ e.preventDefault(); doBob(); });
-
-// ── Experience loop ───────────────────────────────────────────────────────────
+// ── Main loop ─────────────────────────────────────────────────────────────────
 function loop() {
   tick++;
   cx.setTransform(sc,0,0,sc,0,0);
 
-  drawBg();
-  drawParallax(mode==='floating');
-  drawStars();
-  drawRain(mode==='floating');
+  const playing = mode === 'playing';
 
-  // drifters always animate — give life even on title screen
+  drawBg();
+  drawParallax(playing);
+  drawStars();
+  drawRain(playing);
+
+  // drifters animate always
   DRIFTERS.forEach(d=>{
     d.x -= d.spd;
     if(d.x < -20){ d.x=W+20; d.y=20+Math.random()*(H-40); }
   });
 
-  if(mode==='floating'){
+  if(playing) {
     CAT.update();
 
-    // spawn scenery books at gentle intervals
-    bookTimer++;
-    if(bookTimer >= nextBookIn){
-      sceneryBooks.push(makeSceneryBook());
-      bookTimer = 0;
-      nextBookIn = 70+Math.floor(Math.random()*110);
+    // spawn pipes
+    pipeTimer++;
+    if(pipeTimer >= pipeInterval()) {
+      pipes.push(makePipe(score));
+      pipeTimer = 0;
     }
-    sceneryBooks.forEach(b=>{ b.x -= b.spd; });
-    sceneryBooks = sceneryBooks.filter(b=>b.x > -80);
+
+    const spd = pipeSpeed();
+
+    pipes.forEach(pipe => {
+      pipe.x -= spd;
+
+      // score when Miso clears the pipe
+      if(!pipe.scored && pipe.x + PIPE_W < CAT.x - HIT_R) {
+        pipe.scored = true;
+        score++;
+        sfxPoint();
+        if(MILESTONE_MSGS[score]) showToast(MILESTONE_MSGS[score]);
+        else if(score > 100 && score % 25 === 0) showToast('still drifting~');
+      }
+
+      // collision — bounce, no death
+      if(CAT.inv === 0) {
+        const catL = CAT.x - HIT_R, catR = CAT.x + HIT_R;
+        const catT = CAT.y - HIT_R, catB = CAT.y + HIT_R;
+        if(catR > pipe.x && catL < pipe.x + PIPE_W) {
+          const hitTop = catT < pipe.topH;
+          const hitBot = catB > pipe.botY;
+          if(hitTop || hitBot) {
+            sfxBoing();
+            score = Math.max(0, score - 1);
+            CAT.inv = 90; // ~1.5s invincibility
+            // gentle bounce away from the stack
+            CAT.vy = hitTop
+              ?  Math.abs(CAT.vy) * 0.45 + 1.8   // hit top stack → push down
+              : -(Math.abs(CAT.vy) * 0.45 + 1.8); // hit bottom stack → push up
+          }
+        }
+      }
+    });
+
+    pipes = pipes.filter(p => p.x > -PIPE_W - 10);
+
+    // draw pipes behind drifters and Miso
+    pipes.forEach(drawPipe);
+    DRIFTERS.forEach(drawDrifter);
+
+    const flash = CAT.inv > 0 && CAT.inv % 8 < 4;
+    const bobY = Math.sin(tick*0.07)*1.8;
+    const bobA = Math.sin(tick*0.05)*0.025;
+    drawCat(CAT.x, CAT.y+bobY, CAT.angle+bobA, flash);
+
+    drawHUD(score);
+
   } else {
-    // idle: gentle pre-play bob
-    CAT.y     = H/2+8+Math.sin(tick*0.032)*12;
+    // idle — gentle pre-play bob
+    CAT.y     = H/2 + 8 + Math.sin(tick*0.032)*12;
     CAT.angle = Math.sin(tick*0.032)*0.07;
+
+    DRIFTERS.forEach(drawDrifter);
+
+    const bobY = Math.sin(tick*0.07)*1.8;
+    const bobA = Math.sin(tick*0.05)*0.025;
+    drawCat(CAT.x, CAT.y+bobY, CAT.angle+bobA, false);
+
+    drawIdle();
   }
-
-  // draw scenery books behind Miso
-  sceneryBooks.forEach(drawSceneryBooks);
-
-  // draw drifters behind Miso
-  DRIFTERS.forEach(drawDrifter);
-
-  // draw Miso with continuous gentle sway
-  const bobY = Math.sin(tick*0.07)*1.8;
-  const bobA = Math.sin(tick*0.05)*0.025;
-  drawCat(CAT.x, CAT.y+bobY, CAT.angle+bobA);
-
-  // title overlay
-  if(mode==='idle') drawIdle();
 
   requestAnimationFrame(loop);
 }
+
+// ── Input ─────────────────────────────────────────────────────────────────────
+window.addEventListener('keydown', e=>{
+  if(e.code==='Space'||e.code==='ArrowUp'){ e.preventDefault(); doFlap(); }
+});
+cv.addEventListener('pointerdown', e=>{ e.preventDefault(); doFlap(); });
 
 requestAnimationFrame(loop);
 </script>
