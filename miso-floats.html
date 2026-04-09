@@ -335,6 +335,7 @@ function drawCat(x, y, angle) {
   cx.save();
   cx.translate(x,y);
   cx.rotate(angle);
+  cx.scale(-1,1); // flip so head faces right (direction of travel)
   const hw=CAT.w/2, hh=CAT.h/2;
 
   // body
