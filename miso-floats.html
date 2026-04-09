@@ -143,12 +143,43 @@ function tone(freq, dur, vol=0.09, type='sine') {
   } catch(_){}
 }
 const sfxFlap  = () => tone(420, 0.1, 0.06);
-const sfxScore = () => { tone(660,0.14,0.07); setTimeout(()=>tone(880,0.14,0.05),70); };
+const sfxScore = () => { tone(528,0.22,0.038); setTimeout(()=>tone(792,0.2,0.022),100); };
 const sfxDead  = () => {
   tone(300,0.28,0.07);
   setTimeout(()=>tone(220,0.35,0.06),160);
   setTimeout(()=>tone(165,0.5, 0.04),360);
 };
+
+// ── Ambient drone (lofi pad chord, fades in on first play) ────────────────────
+let droneStarted = false;
+function startDrone() {
+  if(droneStarted) return;
+  droneStarted = true;
+  try {
+    if(!ac) ac = new (window.AudioContext||window.webkitAudioContext)();
+    const master = ac.createGain();
+    master.gain.setValueAtTime(0, ac.currentTime);
+    master.gain.linearRampToValueAtTime(1, ac.currentTime+5);
+    master.connect(ac.destination);
+    // C2 / Eb2 / G2 — minor chord drone, very quiet
+    [[65.4,0.012],[82.4,0.010],[98.0,0.009]].forEach(([f,v])=>{
+      const o=ac.createOscillator(), g=ac.createGain();
+      o.type='sine'; o.frequency.value=f;
+      g.gain.value=v;
+      o.connect(g); g.connect(master); o.start();
+    });
+  } catch(_){}
+}
+
+// ── Parallax cloud layers ─────────────────────────────────────────────────────
+const CLOUDS_S = Array.from({length:7}, ()=>({   // slow, large, lavender wisps
+  x:Math.random()*W, y:Math.random()*H,
+  r:50+Math.random()*70, op:Math.random()*0.06+0.025, spd:0.10+Math.random()*0.06,
+}));
+const CLOUDS_F = Array.from({length:11}, ()=>({  // fast, smaller, teal wisps
+  x:Math.random()*W, y:Math.random()*H,
+  r:18+Math.random()*32, op:Math.random()*0.05+0.018, spd:0.22+Math.random()*0.12,
+}));
 
 // ── Stars ─────────────────────────────────────────────────────────────────────
 const STARS = Array.from({length:72}, ()=>({
@@ -237,6 +268,7 @@ const MILESTONES = [
 ];
 let toast = { text:'', age:0, show:false };
 const TOAST_DUR = 210;
+let breatheShown = !!localStorage.getItem('mf_breathed');
 
 // ── Draw: background ──────────────────────────────────────────────────────────
 function drawBg() {
@@ -271,6 +303,25 @@ function drawRain(moving) {
     cx.moveTo(r.x,r.y);
     cx.lineTo(r.x-r.len*0.24,r.y+r.len);
     cx.stroke();
+  });
+}
+
+function drawParallax(moving) {
+  // slow layer — large soft lavender blobs
+  CLOUDS_S.forEach(c=>{
+    if(moving){ c.x-=c.spd; if(c.x+c.r<0){ c.x=W+c.r; c.y=Math.random()*H; } }
+    const g=cx.createRadialGradient(c.x,c.y,0,c.x,c.y,c.r);
+    g.addColorStop(0,`rgba(155,139,180,${c.op})`);
+    g.addColorStop(1,'rgba(12,12,24,0)');
+    cx.fillStyle=g; cx.beginPath(); cx.arc(c.x,c.y,c.r,0,Math.PI*2); cx.fill();
+  });
+  // fast layer — smaller teal wisps
+  CLOUDS_F.forEach(c=>{
+    if(moving){ c.x-=c.spd; if(c.x+c.r<0){ c.x=W+c.r; c.y=Math.random()*H; } }
+    const g=cx.createRadialGradient(c.x,c.y,0,c.x,c.y,c.r);
+    g.addColorStop(0,`rgba(127,181,160,${c.op})`);
+    g.addColorStop(1,'rgba(12,12,24,0)');
+    cx.fillStyle=g; cx.beginPath(); cx.arc(c.x,c.y,c.r,0,Math.PI*2); cx.fill();
   });
 }
 
@@ -442,11 +493,15 @@ function drawIdle() {
 }
 
 function drawDead() {
-  // dim overlay
-  cx.fillStyle='rgba(12,12,24,0.72)';
+  // dim overlay — fades in over first 30 frames
+  const overlayA = Math.min(1, deadTimer/30) * 0.72;
+  cx.fillStyle=`rgba(12,12,24,${overlayA.toFixed(2)})`;
   cx.fillRect(0,0,W,H);
 
-  // card
+  // card fades in over first 40 frames
+  const cardA = Math.min(1, deadTimer/40);
+  cx.globalAlpha = cardA;
+
   const cw=268, ch=206, cx2=W/2-cw/2, cy2=H/2-ch/2;
   cx.fillStyle=SURF; rr(cx2,cy2,cw,ch,14); cx.fill();
   cx.strokeStyle=LAV; cx.lineWidth=1; rr(cx2,cy2,cw,ch,14); cx.stroke();
@@ -471,17 +526,33 @@ function drawDead() {
     cx.fillText(`best: ${best}`, W/2, H/2+4);
   }
 
-  if(deadTimer>42){
-    cx.globalAlpha=0.55+Math.sin(tick*0.05)*0.4;
+  cx.fillStyle=LAV;
+  cx.font=`italic ${15+Math.sin(tick*0.04)*2}px Georgia,serif`;
+  cx.fillText('z  z  z', W/2, H/2+80);
+
+  cx.globalAlpha=1;
+
+  // restart hint — appears after 2 full seconds (120 frames)
+  if(deadTimer>120){
+    cx.globalAlpha=(0.55+Math.sin(tick*0.05)*0.4)*Math.min(1,(deadTimer-120)/30);
     cx.fillStyle=TEAL;
     cx.font='italic 15px Georgia,serif';
+    cx.textAlign='center'; cx.textBaseline='middle';
     cx.fillText('tap or space to float again', W/2, H/2+48);
     cx.globalAlpha=1;
   }
 
-  cx.fillStyle=LAV;
-  cx.font=`italic ${15+Math.sin(tick*0.04)*2}px Georgia,serif`;
-  cx.fillText('z  z  z', W/2, H/2+80);
+  // "breathe~" hint — shown once ever on first death
+  if(!breatheShown && deadTimer>80){
+    const fa = Math.min(1,(deadTimer-80)/40)*0.48;
+    cx.globalAlpha=fa;
+    cx.fillStyle=TEXTD;
+    cx.font='italic 13px Georgia,serif';
+    cx.textAlign='center'; cx.textBaseline='middle';
+    cx.fillText('tap gently~  let miso drift~', W/2, H/2+112);
+    cx.globalAlpha=1;
+    if(deadTimer>260){ breatheShown=true; localStorage.setItem('mf_breathed','1'); }
+  }
 }
 
 // ── Draw: milestone toast ─────────────────────────────────────────────────────
@@ -512,10 +583,10 @@ function hits(p) {
 // ── Input ─────────────────────────────────────────────────────────────────────
 function doFlap() {
   if(mode==='idle'){
-    mode='play'; CAT.flap(diff().flapV);
+    mode='play'; CAT.flap(diff().flapV); startDrone();
   } else if(mode==='play'){
     CAT.flap(diff().flapV);
-  } else if(mode==='dead' && deadTimer>42){
+  } else if(mode==='dead' && deadTimer>120){
     score=0; pipes=[]; ptick=88; toast={text:'',age:0,show:false};
     CAT.reset(); mode='play'; CAT.flap(diff().flapV);
   }
@@ -532,6 +603,7 @@ function loop() {
   cx.setTransform(sc,0,0,sc,0,0);
 
   drawBg();
+  drawParallax(mode==='play');
   drawStars();
   drawRain(mode==='play');
 
@@ -569,7 +641,10 @@ function loop() {
   if(mode==='dead') deadTimer++;
 
   pipes.forEach(drawPipe);
-  drawCat(CAT.x, CAT.y, CAT.angle);
+  // gentle bob — sine wave sway so Miso always feels alive and floating
+  const bobY = mode==='play' ? Math.sin(tick*0.07)*1.8 : 0;
+  const bobA = mode==='play' ? Math.sin(tick*0.05)*0.028 : 0;
+  drawCat(CAT.x, CAT.y+bobY, CAT.angle+bobA);
 
   if(mode==='idle')      drawIdle();
   else if(mode==='play'){ drawScore(); drawToast(); }
