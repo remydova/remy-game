@@ -195,25 +195,27 @@ const CAT = {
 // ── Book-stack pipes ──────────────────────────────────────────────────────────
 const BCOLORS = [TEAL,TEAL2,LAV,LAV2,'#6a8c7c','#8a7ab2','#5e8875'];
 
-function makeCluster(n) {
-  // 2-3 floating books per cluster
-  return Array.from({length: n}, ()=>({
-    h: 20+Math.floor(Math.random()*24),
-    w: 44+Math.floor(Math.random()*16),
-    color: BCOLORS[Math.floor(Math.random()*BCOLORS.length)],
-    rot: (Math.random()-0.5)*0.07, // tiny random lean for hand-drawn feel
-  }));
+function makeStack(totalH) {
+  const books=[]; let h=0;
+  while(h < totalH+60){
+    books.push({
+      h: 16+Math.floor(Math.random()*28),
+      color: BCOLORS[Math.floor(Math.random()*BCOLORS.length)],
+      line: Math.random()>0.32,
+    });
+    h+=books[books.length-1].h;
+  }
+  return books;
 }
 
 function makePipe() {
   const d = diff();
   const margin = 95;
   const gapY = d.gap/2 + margin + Math.random()*(H - d.gap - margin*2);
-  const n = 2+Math.floor(Math.random()*2); // 2 or 3 books
   return {
-    x: W+12, gapY, gap:d.gap, w:56, passed:false,
-    top: makeCluster(n),
-    bot: makeCluster(n),
+    x: W+12, gapY, gap:d.gap, w:50, passed:false,
+    top: makeStack(gapY - d.gap/2),
+    bot: makeStack(H - gapY - d.gap/2),
   };
 }
 
@@ -286,149 +288,109 @@ function rr(x,y,w,h,r){
   cx.closePath();
 }
 
-function drawBook(bx, by, bw, bh, color, rot) {
-  cx.save();
-  cx.translate(bx+bw/2, by+bh/2);
-  cx.rotate(rot||0);
-  // body
-  cx.fillStyle = color;
-  cx.fillRect(-bw/2,-bh/2, bw, bh);
-  // spine (left strip, darker)
-  cx.fillStyle = 'rgba(0,0,0,0.22)';
-  cx.fillRect(-bw/2,-bh/2, 7, bh);
-  cx.fillStyle = 'rgba(255,255,255,0.07)';
-  cx.fillRect(-bw/2+1,-bh/2, 1, bh);
-  // pages edge (right)
-  cx.fillStyle = 'rgba(232,221,208,0.13)';
-  cx.fillRect(bw/2-4,-bh/2+1, 3, bh-2);
-  // title lines
-  cx.fillStyle = 'rgba(255,255,255,0.11)';
-  cx.fillRect(-bw/2+10,-bh/2+5, bw-16, 1.5);
-  if(bh>24) cx.fillRect(-bw/2+10,-bh/2+11, bw-22, 1);
-  // hand-drawn outline
-  cx.strokeStyle = 'rgba(0,0,0,0.12)';
-  cx.lineWidth = 0.6;
-  cx.strokeRect(-bw/2,-bh/2, bw, bh);
-  cx.restore();
-}
-
-function drawCluster(books, px, pw, anchorY, dir) {
-  const sl = books.slice(0,3);
-  if(dir==='top'){
-    // cluster hangs above gap — bottom edge of stack at anchorY
-    const totalH = sl.reduce((s,b)=>s+b.h, 0);
-    let ty = anchorY - totalH;
-    for(const b of sl){
-      drawBook(px+(pw-b.w)/2, ty, b.w, b.h, b.color, b.rot);
-      ty += b.h;
+function drawStack(books, px, pw, startY, maxH) {
+  let y=0;
+  for(const b of books){
+    if(y>=maxH) break;
+    const dh=Math.min(b.h, maxH-y);
+    cx.fillStyle=b.color;
+    cx.fillRect(px, startY+y, pw, dh);
+    cx.fillStyle='rgba(0,0,0,0.2)';
+    cx.fillRect(px,      startY+y, 2,  dh);
+    cx.fillRect(px+pw-2, startY+y, 2,  dh);
+    if(b.line && dh>11){
+      cx.fillStyle='rgba(255,255,255,0.09)';
+      cx.fillRect(px+5, startY+y+4, pw-10, 1.5);
+      if(dh>20) cx.fillRect(px+5, startY+y+9, pw-16, 1);
     }
-    // subtle float shadow below
-    cx.fillStyle='rgba(0,0,0,0.09)';
-    cx.fillRect(px, anchorY, pw, 4);
-  } else {
-    // cluster floats above floor — top edge of stack at anchorY
-    let ty = anchorY;
-    for(const b of sl){
-      drawBook(px+(pw-b.w)/2, ty, b.w, b.h, b.color, b.rot);
-      ty += b.h;
-    }
-    // subtle float shadow above
-    cx.fillStyle='rgba(0,0,0,0.09)';
-    cx.fillRect(px, anchorY-4, pw, 4);
+    y+=b.h;
   }
 }
 
 function drawPipe(p) {
   const topH = p.gapY - p.gap/2;
   const botY = p.gapY + p.gap/2;
-  drawCluster(p.top, p.x, p.w, topH, 'top');
-  drawCluster(p.bot, p.x, p.w, botY, 'bot');
+
+  drawStack(p.top, p.x, p.w, 0,    topH);
+  drawStack(p.bot, p.x, p.w, botY, H-botY);
+
+  cx.fillStyle=TEAL2;
+  cx.fillRect(p.x-4, topH-8, p.w+8, 8);
+  cx.fillRect(p.x-4, botY,   p.w+8, 8);
+  cx.fillStyle='rgba(255,255,255,0.09)';
+  cx.fillRect(p.x-4, topH-8, p.w+8, 2);
+  cx.fillRect(p.x-4, botY,   p.w+8, 2);
 }
 
-// ── Draw: Miso — sleepy forward-facing superman pose ─────────────────────────
-// Face points toward the player. Paws stretch right (toward obstacles).
-// Tail drifts left. Head is forward and visible with half-moon sleepy eyes.
+// ── Draw: Miso the tabby cat ──────────────────────────────────────────────────
 function drawCat(x, y, angle) {
   cx.save();
   cx.translate(x,y);
   cx.rotate(angle);
+  const hw=CAT.w/2, hh=CAT.h/2;
 
-  // ── tail (trailing left behind body) ──
+  // body
+  cx.fillStyle=AMB;
+  rr(-hw,-hh,CAT.w,CAT.h,9);
+  cx.fill();
+
+  // tabby stripes (clipped to body)
+  cx.save();
+  rr(-hw,-hh,CAT.w,CAT.h,9); cx.clip();
+  cx.fillStyle=AMB3;
+  cx.fillRect(-hw+7,  -hh+1, 3.5, CAT.h-2);
+  cx.fillRect(-hw+15, -hh-1, 3,   CAT.h+2);
+  cx.fillRect(-hw+24, -hh+2, 3,   CAT.h-3);
+  cx.fillStyle=AMB2;
+  cx.fillRect(-hw+8,  -hh+2, 1.5, CAT.h-4);
+  cx.fillRect(-hw+16, -hh,   1.5, CAT.h);
+  cx.restore();
+
+  // ears
+  cx.fillStyle=AMB;
+  cx.beginPath(); cx.moveTo(-hw+2,-hh+2); cx.lineTo(-hw-4,-hh-13); cx.lineTo(-hw+13,-hh+1); cx.closePath(); cx.fill();
+  cx.beginPath(); cx.moveTo(-hw+20,-hh+1); cx.lineTo(-hw+28,-hh-13); cx.lineTo(-hw+35,-hh+2); cx.closePath(); cx.fill();
+  cx.fillStyle='#e09080';
+  cx.beginPath(); cx.moveTo(-hw+3,-hh+1); cx.lineTo(-hw-1,-hh-9); cx.lineTo(-hw+10,-hh+1); cx.closePath(); cx.fill();
+  cx.beginPath(); cx.moveTo(-hw+21,-hh+0); cx.lineTo(-hw+27,-hh-9); cx.lineTo(-hw+33,-hh+1); cx.closePath(); cx.fill();
+
+  // eyes
+  cx.fillStyle='#1a1a2e';
+  cx.beginPath(); cx.ellipse(-hw+10,-hh+12,3.5,4,0,0,Math.PI*2); cx.fill();
+  cx.beginPath(); cx.ellipse(-hw+25,-hh+12,3.5,4,0,0,Math.PI*2); cx.fill();
+  cx.fillStyle='rgba(255,255,255,0.78)';
+  cx.beginPath(); cx.arc(-hw+11.5,-hh+10,1.2,0,Math.PI*2); cx.fill();
+  cx.beginPath(); cx.arc(-hw+26.5,-hh+10,1.2,0,Math.PI*2); cx.fill();
+
+  // nose
+  cx.fillStyle='#d08070';
+  cx.beginPath();
+  cx.moveTo(-hw+17.5,-hh+18); cx.lineTo(-hw+14,-hh+15); cx.lineTo(-hw+21,-hh+15);
+  cx.closePath(); cx.fill();
+
+  // mouth
+  cx.strokeStyle='rgba(160,100,80,0.55)'; cx.lineWidth=0.8;
+  cx.beginPath(); cx.moveTo(-hw+17.5,-hh+18); cx.quadraticCurveTo(-hw+14,-hh+22,-hw+11,-hh+21); cx.stroke();
+  cx.beginPath(); cx.moveTo(-hw+17.5,-hh+18); cx.quadraticCurveTo(-hw+21,-hh+22,-hw+24,-hh+21); cx.stroke();
+
+  // whiskers
+  cx.strokeStyle='rgba(232,221,208,0.5)'; cx.lineWidth=0.9;
+  cx.beginPath(); cx.moveTo(-hw+13,-hh+16); cx.lineTo(-hw-8,-hh+13); cx.stroke();
+  cx.beginPath(); cx.moveTo(-hw+13,-hh+18); cx.lineTo(-hw-7,-hh+19); cx.stroke();
+  cx.beginPath(); cx.moveTo(-hw+22,-hh+16); cx.lineTo(-hw+44,-hh+13); cx.stroke();
+  cx.beginPath(); cx.moveTo(-hw+22,-hh+18); cx.lineTo(-hw+43,-hh+19); cx.stroke();
+
+  // tail
   cx.strokeStyle=AMB; cx.lineWidth=4.5; cx.lineCap='round';
   cx.beginPath();
-  cx.moveTo(-8,5);
-  cx.bezierCurveTo(-18,15,-28,5,-24,-11);
+  cx.moveTo(hw-4,hh-4);
+  cx.bezierCurveTo(hw+12,hh+10, hw+22,hh, hw+16,hh-20);
   cx.stroke();
   cx.strokeStyle=AMB3; cx.lineWidth=2;
   cx.beginPath();
-  cx.moveTo(-8,5);
-  cx.bezierCurveTo(-18,15,-28,5,-24,-11);
+  cx.moveTo(hw-3,hh-4);
+  cx.bezierCurveTo(hw+10,hh+8, hw+20,hh, hw+14,hh-19);
   cx.stroke();
-
-  // ── body (horizontal oval) ──
-  cx.fillStyle=AMB;
-  cx.beginPath(); cx.ellipse(3,2,14,9,0,0,Math.PI*2); cx.fill();
-  // tabby stripes on body
-  cx.save();
-  cx.beginPath(); cx.ellipse(3,2,14,9,0,0,Math.PI*2); cx.clip();
-  cx.fillStyle=AMB3;
-  cx.fillRect(-3,-7, 3.5,20); cx.fillRect(4,-8, 3,22); cx.fillRect(11,-7, 2.5,20);
-  cx.fillStyle=AMB2;
-  cx.fillRect(-2,-6, 1.5,18); cx.fillRect(5,-7, 1.5,20);
-  cx.restore();
-
-  // ── head (faces viewer) ──
-  cx.fillStyle=AMB;
-  cx.beginPath(); cx.arc(-7,-1,11,0,Math.PI*2); cx.fill();
-
-  // ── ears ──
-  cx.fillStyle=AMB;
-  cx.beginPath(); cx.moveTo(-15,-9); cx.lineTo(-21,-23); cx.lineTo(-5,-10); cx.closePath(); cx.fill();
-  cx.beginPath(); cx.moveTo(-5,-10); cx.lineTo(-1,-23); cx.lineTo( 4,-9);  cx.closePath(); cx.fill();
-  cx.fillStyle='#e09080';
-  cx.beginPath(); cx.moveTo(-14,-10); cx.lineTo(-18,-19); cx.lineTo(-7,-11); cx.closePath(); cx.fill();
-  cx.beginPath(); cx.moveTo(-5,-11);  cx.lineTo(-2,-19);  cx.lineTo( 3,-10); cx.closePath(); cx.fill();
-
-  // ── sleepy half-moon eyes ──
-  // dark iris base
-  cx.fillStyle='#1a1a2e';
-  cx.beginPath(); cx.ellipse(-11,-2,4,3,0,0,Math.PI*2); cx.fill();
-  cx.beginPath(); cx.ellipse( -3,-2,4,3,0,0,Math.PI*2); cx.fill();
-  // amber eyelid covers top half → droopy look
-  cx.fillStyle=AMB;
-  cx.fillRect(-16,-6,10,4.5);
-  cx.fillRect( -8,-6,10,4.5);
-  // tiny shine
-  cx.fillStyle='rgba(255,255,255,0.72)';
-  cx.beginPath(); cx.arc(-9.5,-1.5,1.1,0,Math.PI*2); cx.fill();
-  cx.beginPath(); cx.arc(-1.5,-1.5,1.1,0,Math.PI*2); cx.fill();
-
-  // ── nose ──
-  cx.fillStyle='#d08070';
-  cx.beginPath(); cx.moveTo(-7,5); cx.lineTo(-10,2); cx.lineTo(-4,2); cx.closePath(); cx.fill();
-
-  // ── drowsy mouth ──
-  cx.strokeStyle='rgba(160,100,80,0.5)'; cx.lineWidth=0.8;
-  cx.beginPath(); cx.moveTo(-7,5); cx.quadraticCurveTo(-10, 9,-12, 8); cx.stroke();
-  cx.beginPath(); cx.moveTo(-7,5); cx.quadraticCurveTo( -4, 9, -2, 8); cx.stroke();
-
-  // ── whiskers ──
-  cx.strokeStyle='rgba(232,221,208,0.5)'; cx.lineWidth=0.9;
-  cx.beginPath(); cx.moveTo(-11,3); cx.lineTo(-27, 0); cx.stroke();
-  cx.beginPath(); cx.moveTo(-11,5); cx.lineTo(-26, 8); cx.stroke();
-  cx.beginPath(); cx.moveTo( -3,3); cx.lineTo(  9, 0); cx.stroke();
-  cx.beginPath(); cx.moveTo( -3,5); cx.lineTo(  8, 8); cx.stroke();
-
-  // ── front paws (stretched right toward obstacles) ──
-  cx.fillStyle=AMB;
-  cx.beginPath(); cx.ellipse(20,-7,7,4.5,-0.2,0,Math.PI*2); cx.fill();
-  cx.beginPath(); cx.ellipse(20, 8,7,4.5, 0.2,0,Math.PI*2); cx.fill();
-  // toe beans
-  cx.fillStyle='#e09080';
-  cx.beginPath(); cx.arc(25,-9,  1.2,0,Math.PI*2); cx.fill();
-  cx.beginPath(); cx.arc(25,-6,  1.2,0,Math.PI*2); cx.fill();
-  cx.beginPath(); cx.arc(25, 6,  1.2,0,Math.PI*2); cx.fill();
-  cx.beginPath(); cx.arc(25, 9,  1.2,0,Math.PI*2); cx.fill();
 
   cx.restore();
 }
