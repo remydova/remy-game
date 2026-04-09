@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>miso floats</title>
-<meta name="description" content="help miso the tabby cat float through remy's apartment">
+<title>float with miso~</title>
+<meta name="description" content="a quiet place to drift with miso the tabby cat">
 <meta name="theme-color" content="#0c0c18">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -20,76 +20,46 @@ canvas{display:block;cursor:pointer}
 <body>
 <canvas id="c"></canvas>
 <script>
-// ── PWA icon (canvas-generated, embedded as data URL) ────────────────────────
+// ── PWA icon (canvas-generated) ───────────────────────────────────────────────
 function makeMisoIcon(size) {
   const ic = document.createElement('canvas');
   ic.width = ic.height = size;
   const x = ic.getContext('2d');
-  const s = size / 192; // scale factor relative to 192px design
-
-  // full-bleed navy background — no rounded corners, maskable icons need edge-to-edge fill
+  const s = size / 192;
   x.fillStyle = '#0c0c18';
   x.fillRect(0, 0, size, size);
-
-  // center the cat — shifted up slightly to leave room for text below
   x.save();
   x.translate(size * 0.5, size * 0.46);
   x.scale(s * 3.0, s * 3.0);
-
   const hw = 22, hh = 16;
-
-  // body
   x.fillStyle = '#d4956a';
-  x.beginPath();
-  x.roundRect(-hw, -hh, hw*2, hh*2, 9);
-  x.fill();
-
-  // stripes
+  x.beginPath(); x.roundRect(-hw,-hh,hw*2,hh*2,9); x.fill();
   x.fillStyle = '#c07850';
-  x.fillRect(-hw+7, -hh+1, 3.5, hh*2-2);
-  x.fillRect(-hw+15, -hh-1, 3, hh*2+2);
-  x.fillRect(-hw+24, -hh+2, 3, hh*2-3);
-
-  // ears
+  x.fillRect(-hw+7,-hh+1,3.5,hh*2-2); x.fillRect(-hw+15,-hh-1,3,hh*2+2); x.fillRect(-hw+24,-hh+2,3,hh*2-3);
   x.fillStyle = '#d4956a';
   x.beginPath(); x.moveTo(-hw+2,-hh+2); x.lineTo(-hw-4,-hh-13); x.lineTo(-hw+13,-hh+1); x.closePath(); x.fill();
   x.beginPath(); x.moveTo(-hw+20,-hh+1); x.lineTo(-hw+28,-hh-13); x.lineTo(-hw+35,-hh+2); x.closePath(); x.fill();
   x.fillStyle = '#e09080';
   x.beginPath(); x.moveTo(-hw+3,-hh+1); x.lineTo(-hw-1,-hh-9); x.lineTo(-hw+10,-hh+1); x.closePath(); x.fill();
   x.beginPath(); x.moveTo(-hw+21,-hh+0); x.lineTo(-hw+27,-hh-9); x.lineTo(-hw+33,-hh+1); x.closePath(); x.fill();
-
-  // eyes
   x.fillStyle = '#1a1a2e';
   x.beginPath(); x.ellipse(-hw+10,-hh+12,3.5,4,0,0,Math.PI*2); x.fill();
   x.beginPath(); x.ellipse(-hw+25,-hh+12,3.5,4,0,0,Math.PI*2); x.fill();
   x.fillStyle = 'rgba(255,255,255,0.8)';
   x.beginPath(); x.arc(-hw+11.5,-hh+10,1.2,0,Math.PI*2); x.fill();
   x.beginPath(); x.arc(-hw+26.5,-hh+10,1.2,0,Math.PI*2); x.fill();
-
-  // nose
   x.fillStyle = '#d08070';
   x.beginPath(); x.moveTo(-hw+17.5,-hh+18); x.lineTo(-hw+14,-hh+15); x.lineTo(-hw+21,-hh+15); x.closePath(); x.fill();
-
-  // tail
   x.strokeStyle = '#d4956a'; x.lineWidth = 4.5; x.lineCap = 'round';
-  x.beginPath();
-  x.moveTo(hw-4,hh-4);
-  x.bezierCurveTo(hw+12,hh+10, hw+22,hh, hw+16,hh-20);
-  x.stroke();
-
+  x.beginPath(); x.moveTo(hw-4,hh-4); x.bezierCurveTo(hw+12,hh+10,hw+22,hh,hw+16,hh-20); x.stroke();
   x.restore();
-
-  // title text
   x.fillStyle = '#d4956a';
-  x.font = `italic bold ${size * 0.1}px Georgia, serif`;
-  x.textAlign = 'center';
-  x.textBaseline = 'bottom';
-  x.fillText('miso floats', size * 0.5, size * 0.97);
-
+  x.font = `italic bold ${size*0.1}px Georgia,serif`;
+  x.textAlign = 'center'; x.textBaseline = 'bottom';
+  x.fillText('miso floats', size*0.5, size*0.97);
   return ic.toDataURL('image/png');
 }
 
-// ── Apple touch icon (canvas-generated for iOS) ───────────────────────────────
 (function(){
   const apple = document.createElement('link');
   apple.rel = 'apple-touch-icon';
@@ -97,7 +67,6 @@ function makeMisoIcon(size) {
   document.head.appendChild(apple);
 })();
 
-// ── Service worker ────────────────────────────────────────────────────────────
 if('serviceWorker' in navigator){
   navigator.serviceWorker.register('./sw.js').catch(()=>{});
 }
@@ -107,50 +76,44 @@ const cv = document.getElementById('c');
 const cx = cv.getContext('2d');
 const W = 400, H = 600;
 let sc = 1;
-
 function resize() {
-  sc = Math.min(window.innerWidth / W, window.innerHeight / H);
-  cv.width  = Math.round(W * sc);
-  cv.height = Math.round(H * sc);
+  sc = Math.min(window.innerWidth/W, window.innerHeight/H);
+  cv.width = Math.round(W*sc); cv.height = Math.round(H*sc);
 }
 resize();
 window.addEventListener('resize', resize);
 
 // ── Palette ───────────────────────────────────────────────────────────────────
-const BG    = '#0c0c18';
-const SURF  = '#13131f';
-const AMB   = '#d4956a';  // miso body
-const AMB2  = '#a06840';  // dark stripe
-const AMB3  = '#c07850';  // mid stripe
-const TEAL  = '#7fb5a0';  // books
-const TEAL2 = '#5a8c7a';  // book ledge / dark
-const LAV   = '#9b8bb4';  // accent / lav books
-const LAV2  = '#7a6894';
-const TEXT  = '#e8ddd0';
-const TEXTD = '#6a5d50';
+const BG   = '#0c0c18';
+const SURF = '#13131f';
+const AMB  = '#d4956a';
+const AMB2 = '#a06840';
+const AMB3 = '#c07850';
+const TEAL = '#7fb5a0';
+const TEAL2= '#5a8c7a';
+const LAV  = '#9b8bb4';
+const LAV2 = '#7a6894';
+const TEXT = '#e8ddd0';
+const TEXTD= '#6a5d50';
 
-// ── Audio (Web Audio API — gentle tones) ─────────────────────────────────────
+// ── Audio ─────────────────────────────────────────────────────────────────────
 let ac;
-function tone(freq, dur, vol=0.09, type='sine') {
+function tone(freq, dur, vol=0.08, type='sine') {
   try {
-    if (!ac) ac = new (window.AudioContext||window.webkitAudioContext)();
-    const o = ac.createOscillator(), g = ac.createGain();
+    if(!ac) ac = new (window.AudioContext||window.webkitAudioContext)();
+    const o=ac.createOscillator(), g=ac.createGain();
     o.connect(g); g.connect(ac.destination);
-    o.type = type; o.frequency.value = freq;
+    o.type=type; o.frequency.value=freq;
     g.gain.setValueAtTime(vol, ac.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + dur);
-    o.start(ac.currentTime); o.stop(ac.currentTime + dur);
+    g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime+dur);
+    o.start(ac.currentTime); o.stop(ac.currentTime+dur);
   } catch(_){}
 }
-const sfxFlap  = () => tone(420, 0.1, 0.06);
-const sfxScore = () => { tone(528,0.22,0.038); setTimeout(()=>tone(792,0.2,0.022),100); };
-const sfxDead  = () => {
-  tone(300,0.28,0.07);
-  setTimeout(()=>tone(220,0.35,0.06),160);
-  setTimeout(()=>tone(165,0.5, 0.04),360);
-};
 
-// ── Ambient drone (lofi pad chord, fades in on first play) ────────────────────
+// Soft upward bob chime — single gentle note
+const sfxBob = () => tone(528, 0.2, 0.032);
+
+// Ambient lofi pad drone — C2/Eb2/G2 minor chord
 let droneStarted = false;
 function startDrone() {
   if(droneStarted) return;
@@ -159,24 +122,22 @@ function startDrone() {
     if(!ac) ac = new (window.AudioContext||window.webkitAudioContext)();
     const master = ac.createGain();
     master.gain.setValueAtTime(0, ac.currentTime);
-    master.gain.linearRampToValueAtTime(1, ac.currentTime+5);
+    master.gain.linearRampToValueAtTime(1, ac.currentTime+6);
     master.connect(ac.destination);
-    // C2 / Eb2 / G2 — minor chord drone, very quiet
-    [[65.4,0.012],[82.4,0.010],[98.0,0.009]].forEach(([f,v])=>{
+    [[65.4,0.011],[82.4,0.009],[98.0,0.008]].forEach(([f,v])=>{
       const o=ac.createOscillator(), g=ac.createGain();
-      o.type='sine'; o.frequency.value=f;
-      g.gain.value=v;
+      o.type='sine'; o.frequency.value=f; g.gain.value=v;
       o.connect(g); g.connect(master); o.start();
     });
   } catch(_){}
 }
 
 // ── Parallax cloud layers ─────────────────────────────────────────────────────
-const CLOUDS_S = Array.from({length:7}, ()=>({   // slow, large, lavender wisps
+const CLOUDS_S = Array.from({length:7}, ()=>({
   x:Math.random()*W, y:Math.random()*H,
   r:50+Math.random()*70, op:Math.random()*0.06+0.025, spd:0.10+Math.random()*0.06,
 }));
-const CLOUDS_F = Array.from({length:11}, ()=>({  // fast, smaller, teal wisps
+const CLOUDS_F = Array.from({length:11}, ()=>({
   x:Math.random()*W, y:Math.random()*H,
   r:18+Math.random()*32, op:Math.random()*0.05+0.018, spd:0.22+Math.random()*0.12,
 }));
@@ -197,84 +158,73 @@ const RAIN = Array.from({length:48}, ()=>({
   op:Math.random()*0.16+0.04,
 }));
 
-// ── Progressive difficulty ────────────────────────────────────────────────────
-// Fully eased in by score 90. Start: slow, floaty, wide gaps. End: classic feel.
-function lerp(a,b,t){ return a+(b-a)*Math.min(1,t); }
-function diff() {
-  const t = Math.min(1, score / 90);
+// ── Floating scenery — books ──────────────────────────────────────────────────
+const BCOLORS = [TEAL,TEAL2,LAV,LAV2,'#6a8c7c','#8a7ab2','#5e8875'];
+
+function makeSceneryBook() {
+  const n = 1+Math.floor(Math.random()*3); // 1-3 books stacked
   return {
-    gravity:   lerp(0.15, 0.40, t),
-    flapV:     lerp(-5.2, -7.3, t),
-    pspeed:    lerp(1.0,  3.0,  t),
-    gap:       lerp(240,  128,  t),
-    pinterval: Math.round(lerp(145, 90, t)),
+    x: W+30,
+    y: 50+Math.random()*(H-100),
+    spd: 0.28+Math.random()*0.5,
+    op: 0.32+Math.random()*0.52,
+    books: Array.from({length:n}, ()=>({
+      w: 36+Math.floor(Math.random()*20),
+      h: 16+Math.floor(Math.random()*22),
+      color: BCOLORS[Math.floor(Math.random()*BCOLORS.length)],
+      rot: (Math.random()-0.5)*0.12,
+    })),
   };
 }
 
-// ── Cat state ─────────────────────────────────────────────────────────────────
+let sceneryBooks = [], bookTimer = 0, nextBookIn = 80;
+
+// ── Floating scenery — drifters (notes, tiny stars, flowers) ─────────────────
+const NOTE_CHARS = ['♩','♪','♫','♬'];
+
+function makeDrifter(scattered) {
+  const type = ['note','flower','star'][Math.floor(Math.random()*3)];
+  return {
+    type,
+    char: type==='note' ? NOTE_CHARS[Math.floor(Math.random()*4)] : '',
+    x: scattered ? Math.random()*W : W+20,
+    y: 20+Math.random()*(H-40),
+    spd: 0.10+Math.random()*0.38,
+    op: 0.07+Math.random()*0.20,
+    sz: 0.5+Math.random()*1.1,
+    rot: Math.random()*Math.PI*2,
+    rotSpd: (Math.random()-0.5)*0.007,
+    bobPh: Math.random()*Math.PI*2,
+    bobSpd: 0.008+Math.random()*0.012,
+    bobAmp: 3+Math.random()*9,
+  };
+}
+
+// Start scattered so screen isn't empty at launch
+const DRIFTERS = Array.from({length:20}, ()=>makeDrifter(true));
+
+// ── Miso spring-float physics ─────────────────────────────────────────────────
 const CAT = {
   x:100, y:H/2, vy:0, angle:0, w:44, h:32,
-  reset(){ this.y=H/2; this.vy=0; this.angle=0; },
-  flap(fv){ this.vy=fv; sfxFlap(); },
-  update(grav){
-    this.vy += grav;
-    this.y  += this.vy;
-    this.angle = Math.max(-0.45, Math.min(1.1, this.vy*0.055));
+  bob() {
+    this.vy = -3.6;
+    sfxBob();
+  },
+  update() {
+    const spring = (H/2 - this.y) * 0.006; // gentle pull toward center
+    this.vy = (this.vy + spring) * 0.96;    // soft damping
+    this.y += this.vy;
+    this.angle = Math.max(-0.28, Math.min(0.28, this.vy*0.055));
   },
 };
 
-// ── Book-stack pipes ──────────────────────────────────────────────────────────
-const BCOLORS = [TEAL,TEAL2,LAV,LAV2,'#6a8c7c','#8a7ab2','#5e8875'];
-
-function makeCluster(n) {
-  return Array.from({length: n}, ()=>({
-    h: 20+Math.floor(Math.random()*24),
-    w: 44+Math.floor(Math.random()*16),
-    color: BCOLORS[Math.floor(Math.random()*BCOLORS.length)],
-    rot: (Math.random()-0.5)*0.07,
-  }));
-}
-
-function makePipe() {
-  const d = diff();
-  const margin = 95;
-  const gapY = d.gap/2 + margin + Math.random()*(H - d.gap - margin*2);
-  const n = 2+Math.floor(Math.random()*2);
-  return {
-    x: W+12, gapY, gap:d.gap, w:56, passed:false,
-    top: makeCluster(n),
-    bot: makeCluster(n),
-  };
-}
-
-let pipes=[], ptick=88; // ~64% of starting pinterval so first pipe comes soon
-let score=0, best=+(localStorage.getItem('mf_best')||0);
-let mode='idle'; // idle | play | dead
-let tick=0, deadTimer=0;
-
-// ── Milestone messages ────────────────────────────────────────────────────────
-const MILESTONES = [
-  '',
-  'still floating~',
-  'miso is vibing~',
-  "the books don't mind~",
-  'just drift~',
-  'somewhere between awake and asleep~',
-  'miso knows the way~',
-  'the rain sounds nice~',
-  'this apartment is infinite~',
-  'even the stars are watching~',
-  'one hundred drifts. wow.~',
-];
-let toast = { text:'', age:0, show:false };
-const TOAST_DUR = 210;
-let breatheShown = !!localStorage.getItem('mf_breathed');
+// ── State ─────────────────────────────────────────────────────────────────────
+let mode = 'idle'; // idle | floating
+let tick = 0;
 
 // ── Draw: background ──────────────────────────────────────────────────────────
 function drawBg() {
-  cx.fillStyle = BG;
-  cx.fillRect(0,0,W,H);
-  // faint lavender glow at top
+  cx.fillStyle = BG; cx.fillRect(0,0,W,H);
   const g = cx.createRadialGradient(W/2,0,0,W/2,0,H*0.55);
   g.addColorStop(0,'rgba(155,139,180,0.05)');
   g.addColorStop(1,'rgba(0,0,0,0)');
@@ -299,33 +249,26 @@ function drawRain(moving) {
     }
     cx.strokeStyle=`rgba(127,181,160,${r.op})`;
     cx.lineWidth=0.75;
-    cx.beginPath();
-    cx.moveTo(r.x,r.y);
-    cx.lineTo(r.x-r.len*0.24,r.y+r.len);
-    cx.stroke();
+    cx.beginPath(); cx.moveTo(r.x,r.y); cx.lineTo(r.x-r.len*0.24,r.y+r.len); cx.stroke();
   });
 }
 
 function drawParallax(moving) {
-  // slow layer — large soft lavender blobs
   CLOUDS_S.forEach(c=>{
     if(moving){ c.x-=c.spd; if(c.x+c.r<0){ c.x=W+c.r; c.y=Math.random()*H; } }
     const g=cx.createRadialGradient(c.x,c.y,0,c.x,c.y,c.r);
-    g.addColorStop(0,`rgba(155,139,180,${c.op})`);
-    g.addColorStop(1,'rgba(12,12,24,0)');
+    g.addColorStop(0,`rgba(155,139,180,${c.op})`); g.addColorStop(1,'rgba(12,12,24,0)');
     cx.fillStyle=g; cx.beginPath(); cx.arc(c.x,c.y,c.r,0,Math.PI*2); cx.fill();
   });
-  // fast layer — smaller teal wisps
   CLOUDS_F.forEach(c=>{
     if(moving){ c.x-=c.spd; if(c.x+c.r<0){ c.x=W+c.r; c.y=Math.random()*H; } }
     const g=cx.createRadialGradient(c.x,c.y,0,c.x,c.y,c.r);
-    g.addColorStop(0,`rgba(127,181,160,${c.op})`);
-    g.addColorStop(1,'rgba(12,12,24,0)');
+    g.addColorStop(0,`rgba(127,181,160,${c.op})`); g.addColorStop(1,'rgba(12,12,24,0)');
     cx.fillStyle=g; cx.beginPath(); cx.arc(c.x,c.y,c.r,0,Math.PI*2); cx.fill();
   });
 }
 
-// ── Draw: book stacks ─────────────────────────────────────────────────────────
+// ── Draw: rounded rect helper ─────────────────────────────────────────────────
 function rr(x,y,w,h,r){
   cx.beginPath();
   cx.moveTo(x+r,y);
@@ -336,49 +279,66 @@ function rr(x,y,w,h,r){
   cx.closePath();
 }
 
-function drawBook(bx, by, bw, bh, color, rot) {
+// ── Draw: single book ─────────────────────────────────────────────────────────
+function drawBook(bx,by,bw,bh,color,rot) {
   cx.save();
-  cx.translate(bx+bw/2, by+bh/2);
-  cx.rotate(rot||0);
-  cx.fillStyle=color;
-  cx.fillRect(-bw/2,-bh/2, bw, bh);
-  // spine
-  cx.fillStyle='rgba(0,0,0,0.22)';
-  cx.fillRect(-bw/2,-bh/2, 7, bh);
-  cx.fillStyle='rgba(255,255,255,0.07)';
-  cx.fillRect(-bw/2+1,-bh/2, 1, bh);
-  // pages edge
-  cx.fillStyle='rgba(232,221,208,0.13)';
-  cx.fillRect(bw/2-4,-bh/2+1, 3, bh-2);
-  // title lines
-  cx.fillStyle='rgba(255,255,255,0.11)';
-  cx.fillRect(-bw/2+10,-bh/2+5, bw-16, 1.5);
-  if(bh>24) cx.fillRect(-bw/2+10,-bh/2+11, bw-22, 1);
-  // outline
+  cx.translate(bx+bw/2, by+bh/2); cx.rotate(rot||0);
+  cx.fillStyle=color; cx.fillRect(-bw/2,-bh/2,bw,bh);
+  cx.fillStyle='rgba(0,0,0,0.22)'; cx.fillRect(-bw/2,-bh/2,7,bh);
+  cx.fillStyle='rgba(255,255,255,0.07)'; cx.fillRect(-bw/2+1,-bh/2,1,bh);
+  cx.fillStyle='rgba(232,221,208,0.13)'; cx.fillRect(bw/2-4,-bh/2+1,3,bh-2);
+  cx.fillStyle='rgba(255,255,255,0.11)'; cx.fillRect(-bw/2+10,-bh/2+5,bw-16,1.5);
+  if(bh>24) cx.fillRect(-bw/2+10,-bh/2+11,bw-22,1);
   cx.strokeStyle='rgba(0,0,0,0.12)'; cx.lineWidth=0.6;
-  cx.strokeRect(-bw/2,-bh/2, bw, bh);
+  cx.strokeRect(-bw/2,-bh/2,bw,bh);
   cx.restore();
 }
 
-function drawCluster(books, px, pw, anchorY, dir) {
-  const sl = books.slice(0,3);
-  if(dir==='top'){
-    const totalH = sl.reduce((s,b)=>s+b.h, 0);
-    let ty = anchorY - totalH;
-    for(const b of sl){ drawBook(px+(pw-b.w)/2, ty, b.w, b.h, b.color, b.rot); ty+=b.h; }
-    cx.fillStyle='rgba(0,0,0,0.09)'; cx.fillRect(px, anchorY, pw, 4);
-  } else {
-    let ty = anchorY;
-    for(const b of sl){ drawBook(px+(pw-b.w)/2, ty, b.w, b.h, b.color, b.rot); ty+=b.h; }
-    cx.fillStyle='rgba(0,0,0,0.09)'; cx.fillRect(px, anchorY-4, pw, 4);
+// ── Draw: scenery book cluster ────────────────────────────────────────────────
+function drawSceneryBooks(sb) {
+  cx.save();
+  cx.globalAlpha = sb.op;
+  const totalH = sb.books.reduce((s,bk)=>s+bk.h+1,0)-1;
+  let ty = sb.y - totalH/2;
+  for(const bk of sb.books){
+    drawBook(sb.x - bk.w/2, ty, bk.w, bk.h, bk.color, bk.rot);
+    ty += bk.h+1;
   }
+  cx.restore();
 }
 
-function drawPipe(p) {
-  const topH = p.gapY - p.gap/2;
-  const botY = p.gapY + p.gap/2;
-  drawCluster(p.top, p.x, p.w, topH, 'top');
-  drawCluster(p.bot, p.x, p.w, botY, 'bot');
+// ── Draw: drifting elements (notes, tiny stars, flowers) ─────────────────────
+function drawDrifter(d) {
+  d.bobPh += d.bobSpd;
+  d.rot   += d.rotSpd;
+  const dy = Math.sin(d.bobPh)*d.bobAmp;
+  cx.save();
+  cx.globalAlpha = d.op;
+  cx.translate(d.x, d.y+dy);
+  cx.rotate(d.rot);
+
+  if(d.type==='note'){
+    cx.fillStyle=LAV;
+    cx.font=`italic ${Math.round(13*d.sz)}px Georgia,serif`;
+    cx.textAlign='center'; cx.textBaseline='middle';
+    cx.fillText(d.char, 0, 0);
+  } else if(d.type==='star'){
+    const sr=3*d.sz;
+    cx.fillStyle=TEXT;
+    cx.beginPath(); cx.arc(0,0,sr*0.55,0,Math.PI*2); cx.fill();
+    cx.fillStyle=`rgba(232,221,208,0.55)`;
+    cx.fillRect(-0.6,-sr,1.2,sr*2); cx.fillRect(-sr,-0.6,sr*2,1.2);
+  } else { // flower
+    const r=3.2*d.sz, pr=1.6*d.sz;
+    cx.fillStyle=TEXTD;
+    for(let i=0;i<5;i++){
+      const a=(i/5)*Math.PI*2;
+      cx.beginPath(); cx.arc(Math.cos(a)*r,Math.sin(a)*r,pr,0,Math.PI*2); cx.fill();
+    }
+    cx.fillStyle=AMB;
+    cx.beginPath(); cx.arc(0,0,pr*0.85,0,Math.PI*2); cx.fill();
+  }
+  cx.restore();
 }
 
 // ── Draw: Miso the tabby cat ──────────────────────────────────────────────────
@@ -386,27 +346,19 @@ function drawCat(x, y, angle) {
   cx.save();
   cx.translate(x,y);
   cx.rotate(angle);
-  cx.scale(-1,1); // flip so head faces right (direction of travel)
+  cx.scale(-1,1);
   const hw=CAT.w/2, hh=CAT.h/2;
 
-  // body
-  cx.fillStyle=AMB;
-  rr(-hw,-hh,CAT.w,CAT.h,9);
-  cx.fill();
+  cx.fillStyle=AMB; rr(-hw,-hh,CAT.w,CAT.h,9); cx.fill();
 
-  // tabby stripes (clipped to body)
   cx.save();
   rr(-hw,-hh,CAT.w,CAT.h,9); cx.clip();
   cx.fillStyle=AMB3;
-  cx.fillRect(-hw+7,  -hh+1, 3.5, CAT.h-2);
-  cx.fillRect(-hw+15, -hh-1, 3,   CAT.h+2);
-  cx.fillRect(-hw+24, -hh+2, 3,   CAT.h-3);
+  cx.fillRect(-hw+7,-hh+1,3.5,CAT.h-2); cx.fillRect(-hw+15,-hh-1,3,CAT.h+2); cx.fillRect(-hw+24,-hh+2,3,CAT.h-3);
   cx.fillStyle=AMB2;
-  cx.fillRect(-hw+8,  -hh+2, 1.5, CAT.h-4);
-  cx.fillRect(-hw+16, -hh,   1.5, CAT.h);
+  cx.fillRect(-hw+8,-hh+2,1.5,CAT.h-4); cx.fillRect(-hw+16,-hh,1.5,CAT.h);
   cx.restore();
 
-  // ears
   cx.fillStyle=AMB;
   cx.beginPath(); cx.moveTo(-hw+2,-hh+2); cx.lineTo(-hw-4,-hh-13); cx.lineTo(-hw+13,-hh+1); cx.closePath(); cx.fill();
   cx.beginPath(); cx.moveTo(-hw+20,-hh+1); cx.lineTo(-hw+28,-hh-13); cx.lineTo(-hw+35,-hh+2); cx.closePath(); cx.fill();
@@ -414,7 +366,6 @@ function drawCat(x, y, angle) {
   cx.beginPath(); cx.moveTo(-hw+3,-hh+1); cx.lineTo(-hw-1,-hh-9); cx.lineTo(-hw+10,-hh+1); cx.closePath(); cx.fill();
   cx.beginPath(); cx.moveTo(-hw+21,-hh+0); cx.lineTo(-hw+27,-hh-9); cx.lineTo(-hw+33,-hh+1); cx.closePath(); cx.fill();
 
-  // eyes
   cx.fillStyle='#1a1a2e';
   cx.beginPath(); cx.ellipse(-hw+10,-hh+12,3.5,4,0,0,Math.PI*2); cx.fill();
   cx.beginPath(); cx.ellipse(-hw+25,-hh+12,3.5,4,0,0,Math.PI*2); cx.fill();
@@ -422,57 +373,38 @@ function drawCat(x, y, angle) {
   cx.beginPath(); cx.arc(-hw+11.5,-hh+10,1.2,0,Math.PI*2); cx.fill();
   cx.beginPath(); cx.arc(-hw+26.5,-hh+10,1.2,0,Math.PI*2); cx.fill();
 
-  // nose
   cx.fillStyle='#d08070';
-  cx.beginPath();
-  cx.moveTo(-hw+17.5,-hh+18); cx.lineTo(-hw+14,-hh+15); cx.lineTo(-hw+21,-hh+15);
-  cx.closePath(); cx.fill();
+  cx.beginPath(); cx.moveTo(-hw+17.5,-hh+18); cx.lineTo(-hw+14,-hh+15); cx.lineTo(-hw+21,-hh+15); cx.closePath(); cx.fill();
 
-  // mouth
   cx.strokeStyle='rgba(160,100,80,0.55)'; cx.lineWidth=0.8;
   cx.beginPath(); cx.moveTo(-hw+17.5,-hh+18); cx.quadraticCurveTo(-hw+14,-hh+22,-hw+11,-hh+21); cx.stroke();
   cx.beginPath(); cx.moveTo(-hw+17.5,-hh+18); cx.quadraticCurveTo(-hw+21,-hh+22,-hw+24,-hh+21); cx.stroke();
 
-  // whiskers
   cx.strokeStyle='rgba(232,221,208,0.5)'; cx.lineWidth=0.9;
   cx.beginPath(); cx.moveTo(-hw+13,-hh+16); cx.lineTo(-hw-8,-hh+13); cx.stroke();
   cx.beginPath(); cx.moveTo(-hw+13,-hh+18); cx.lineTo(-hw-7,-hh+19); cx.stroke();
   cx.beginPath(); cx.moveTo(-hw+22,-hh+16); cx.lineTo(-hw+44,-hh+13); cx.stroke();
   cx.beginPath(); cx.moveTo(-hw+22,-hh+18); cx.lineTo(-hw+43,-hh+19); cx.stroke();
 
-  // tail
   cx.strokeStyle=AMB; cx.lineWidth=4.5; cx.lineCap='round';
-  cx.beginPath();
-  cx.moveTo(hw-4,hh-4);
-  cx.bezierCurveTo(hw+12,hh+10, hw+22,hh, hw+16,hh-20);
-  cx.stroke();
+  cx.beginPath(); cx.moveTo(hw-4,hh-4); cx.bezierCurveTo(hw+12,hh+10,hw+22,hh,hw+16,hh-20); cx.stroke();
   cx.strokeStyle=AMB3; cx.lineWidth=2;
-  cx.beginPath();
-  cx.moveTo(hw-3,hh-4);
-  cx.bezierCurveTo(hw+10,hh+8, hw+20,hh, hw+14,hh-19);
-  cx.stroke();
+  cx.beginPath(); cx.moveTo(hw-3,hh-4); cx.bezierCurveTo(hw+10,hh+8,hw+20,hh,hw+14,hh-19); cx.stroke();
 
   cx.restore();
 }
 
-// ── Draw: HUD screens ─────────────────────────────────────────────────────────
-function drawScore() {
-  cx.fillStyle='rgba(232,221,208,0.88)';
-  cx.font='bold 30px Georgia,serif';
-  cx.textAlign='center'; cx.textBaseline='top';
-  cx.fillText(score, W/2, 22);
-}
-
+// ── Draw: title screen ────────────────────────────────────────────────────────
 function drawIdle() {
   cx.textAlign='center'; cx.textBaseline='middle';
 
   cx.fillStyle=AMB;
-  cx.font='italic bold 38px Georgia,serif';
-  cx.fillText('miso floats', W/2, H/2-72);
+  cx.font='italic bold 34px Georgia,serif';
+  cx.fillText('float with miso~', W/2, H/2-72);
 
   cx.fillStyle=TEXTD;
-  cx.font='15px Georgia,serif';
-  cx.fillText("help miso drift through remy's apartment", W/2, H/2-36);
+  cx.font='14px Georgia,serif';
+  cx.fillText('a quiet place to drift', W/2, H/2-38);
 
   const pulse=0.5+Math.sin(tick*0.045)*0.42;
   cx.globalAlpha=pulse;
@@ -481,174 +413,69 @@ function drawIdle() {
   cx.fillText('tap  ·  or press space', W/2, H/2+32);
   cx.globalAlpha=1;
 
-  if(best>0){
-    cx.fillStyle=TEXTD;
-    cx.font='13px Georgia,serif';
-    cx.fillText(`best: ${best}`, W/2, H/2+66);
-  }
-
-  cx.fillStyle='rgba(106,93,80,0.42)';
+  cx.fillStyle='rgba(106,93,80,0.4)';
   cx.font='italic 11px Georgia,serif';
   cx.fillText("it's okay to be you.", W/2, H-22);
 }
 
-function drawDead() {
-  // dim overlay — fades in over first 30 frames
-  const overlayA = Math.min(1, deadTimer/30) * 0.72;
-  cx.fillStyle=`rgba(12,12,24,${overlayA.toFixed(2)})`;
-  cx.fillRect(0,0,W,H);
-
-  // card fades in over first 40 frames
-  const cardA = Math.min(1, deadTimer/40);
-  cx.globalAlpha = cardA;
-
-  const cw=268, ch=206, cx2=W/2-cw/2, cy2=H/2-ch/2;
-  cx.fillStyle=SURF; rr(cx2,cy2,cw,ch,14); cx.fill();
-  cx.strokeStyle=LAV; cx.lineWidth=1; rr(cx2,cy2,cw,ch,14); cx.stroke();
-
-  cx.textAlign='center'; cx.textBaseline='middle';
-
-  cx.fillStyle=AMB;
-  cx.font='italic bold 23px Georgia,serif';
-  cx.fillText('miso dozed off~', W/2, H/2-64);
-
-  cx.fillStyle=TEXT;
-  cx.font='16px Georgia,serif';
-  cx.fillText(`floated past ${score} stack${score!==1?'s':''}`, W/2, H/2-28);
-
-  if(score>0 && score>=best){
-    cx.fillStyle=TEAL;
-    cx.font='italic 14px Georgia,serif';
-    cx.fillText('new best  ✦', W/2, H/2+2);
-  } else if(best>0){
-    cx.fillStyle=TEXTD;
-    cx.font='13px Georgia,serif';
-    cx.fillText(`best: ${best}`, W/2, H/2+4);
-  }
-
-  cx.fillStyle=LAV;
-  cx.font=`italic ${15+Math.sin(tick*0.04)*2}px Georgia,serif`;
-  cx.fillText('z  z  z', W/2, H/2+80);
-
-  cx.globalAlpha=1;
-
-  // restart hint — appears after 2 full seconds (120 frames)
-  if(deadTimer>120){
-    cx.globalAlpha=(0.55+Math.sin(tick*0.05)*0.4)*Math.min(1,(deadTimer-120)/30);
-    cx.fillStyle=TEAL;
-    cx.font='italic 15px Georgia,serif';
-    cx.textAlign='center'; cx.textBaseline='middle';
-    cx.fillText('tap or space to float again', W/2, H/2+48);
-    cx.globalAlpha=1;
-  }
-
-  // "breathe~" hint — shown once ever on first death
-  if(!breatheShown && deadTimer>80){
-    const fa = Math.min(1,(deadTimer-80)/40)*0.48;
-    cx.globalAlpha=fa;
-    cx.fillStyle=TEXTD;
-    cx.font='italic 13px Georgia,serif';
-    cx.textAlign='center'; cx.textBaseline='middle';
-    cx.fillText('tap gently~  let miso drift~', W/2, H/2+112);
-    cx.globalAlpha=1;
-    if(deadTimer>260){ breatheShown=true; localStorage.setItem('mf_breathed','1'); }
-  }
-}
-
-// ── Draw: milestone toast ─────────────────────────────────────────────────────
-function drawToast() {
-  if(!toast.show) return;
-  toast.age++;
-  const fade = toast.age < 35      ? toast.age/35 :
-               toast.age > TOAST_DUR-35 ? (TOAST_DUR-toast.age)/35 : 1;
-  if(fade <= 0){ toast.show=false; return; }
-  cx.globalAlpha = fade * 0.82;
-  cx.fillStyle   = TEAL;
-  cx.font        = 'italic 15px Georgia,serif';
-  cx.textAlign   = 'center';
-  cx.textBaseline= 'middle';
-  cx.fillText(toast.text, W/2, 72);
-  cx.globalAlpha = 1;
-}
-
-// ── Collision ─────────────────────────────────────────────────────────────────
-function hits(p) {
-  const pad=5;
-  const mx=CAT.x-CAT.w/2+pad, mw=CAT.w-pad*2;
-  const my=CAT.y-CAT.h/2+pad, mh=CAT.h-pad*2;
-  const topH=p.gapY-p.gap/2, botY=p.gapY+p.gap/2;
-  return mx+mw>p.x && mx<p.x+p.w && (my<topH || my+mh>botY);
-}
-
 // ── Input ─────────────────────────────────────────────────────────────────────
-function doFlap() {
-  if(mode==='idle'){
-    mode='play'; CAT.flap(diff().flapV); startDrone();
-  } else if(mode==='play'){
-    CAT.flap(diff().flapV);
-  } else if(mode==='dead' && deadTimer>120){
-    score=0; pipes=[]; ptick=88; toast={text:'',age:0,show:false};
-    CAT.reset(); mode='play'; CAT.flap(diff().flapV);
-  }
+function doBob() {
+  if(mode==='idle'){ mode='floating'; startDrone(); }
+  CAT.bob();
 }
 
 window.addEventListener('keydown', e=>{
-  if(e.code==='Space'||e.code==='ArrowUp'){ e.preventDefault(); doFlap(); }
+  if(e.code==='Space'||e.code==='ArrowUp'){ e.preventDefault(); doBob(); }
 });
-cv.addEventListener('pointerdown', e=>{ e.preventDefault(); doFlap(); });
+cv.addEventListener('pointerdown', e=>{ e.preventDefault(); doBob(); });
 
-// ── Game loop ─────────────────────────────────────────────────────────────────
+// ── Experience loop ───────────────────────────────────────────────────────────
 function loop() {
   tick++;
   cx.setTransform(sc,0,0,sc,0,0);
 
   drawBg();
-  drawParallax(mode==='play');
+  drawParallax(mode==='floating');
   drawStars();
-  drawRain(mode==='play');
+  drawRain(mode==='floating');
 
-  if(mode==='play'){
-    const d = diff();
-    CAT.update(d.gravity);
+  // drifters always animate — give life even on title screen
+  DRIFTERS.forEach(d=>{
+    d.x -= d.spd;
+    if(d.x < -20){ d.x=W+20; d.y=20+Math.random()*(H-40); }
+  });
 
-    ptick++;
-    if(ptick>=d.pinterval){ pipes.push(makePipe()); ptick=0; }
+  if(mode==='floating'){
+    CAT.update();
 
-    pipes.forEach(p=>{
-      p.x-=d.pspeed;
-      if(!p.passed && p.x+p.w<CAT.x){
-        p.passed=true; score++;
-        if(score>best){ best=score; localStorage.setItem('mf_best',best); }
-        sfxScore();
-        if(score%10===0){
-          const mi = Math.min(score/10, MILESTONES.length-1);
-          toast = { text:MILESTONES[mi], age:0, show:true };
-        }
-      }
-    });
-    pipes=pipes.filter(p=>p.x+p.w>-12);
-
-    if(CAT.y>H+20 || CAT.y<-20 || pipes.some(hits)){
-      mode='dead'; deadTimer=0; sfxDead();
+    // spawn scenery books at gentle intervals
+    bookTimer++;
+    if(bookTimer >= nextBookIn){
+      sceneryBooks.push(makeSceneryBook());
+      bookTimer = 0;
+      nextBookIn = 70+Math.floor(Math.random()*110);
     }
+    sceneryBooks.forEach(b=>{ b.x -= b.spd; });
+    sceneryBooks = sceneryBooks.filter(b=>b.x > -80);
+  } else {
+    // idle: gentle pre-play bob
+    CAT.y     = H/2+8+Math.sin(tick*0.032)*12;
+    CAT.angle = Math.sin(tick*0.032)*0.07;
   }
 
-  if(mode==='idle'){
-    CAT.y = H/2+10+Math.sin(tick*0.032)*13;
-    CAT.angle = Math.sin(tick*0.032)*0.08;
-  }
+  // draw scenery books behind Miso
+  sceneryBooks.forEach(drawSceneryBooks);
 
-  if(mode==='dead') deadTimer++;
+  // draw drifters behind Miso
+  DRIFTERS.forEach(drawDrifter);
 
-  pipes.forEach(drawPipe);
-  // gentle bob — sine wave sway so Miso always feels alive and floating
-  const bobY = mode==='play' ? Math.sin(tick*0.07)*1.8 : 0;
-  const bobA = mode==='play' ? Math.sin(tick*0.05)*0.028 : 0;
+  // draw Miso with continuous gentle sway
+  const bobY = Math.sin(tick*0.07)*1.8;
+  const bobA = Math.sin(tick*0.05)*0.025;
   drawCat(CAT.x, CAT.y+bobY, CAT.angle+bobA);
 
-  if(mode==='idle')      drawIdle();
-  else if(mode==='play'){ drawScore(); drawToast(); }
-  else                   drawDead();
+  // title overlay
+  if(mode==='idle') drawIdle();
 
   requestAnimationFrame(loop);
 }
