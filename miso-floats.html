@@ -195,27 +195,24 @@ const CAT = {
 // ── Book-stack pipes ──────────────────────────────────────────────────────────
 const BCOLORS = [TEAL,TEAL2,LAV,LAV2,'#6a8c7c','#8a7ab2','#5e8875'];
 
-function makeStack(totalH) {
-  const books=[]; let h=0;
-  while(h < totalH+60){
-    books.push({
-      h: 16+Math.floor(Math.random()*28),
-      color: BCOLORS[Math.floor(Math.random()*BCOLORS.length)],
-      line: Math.random()>0.32,
-    });
-    h+=books[books.length-1].h;
-  }
-  return books;
+function makeCluster(n) {
+  return Array.from({length: n}, ()=>({
+    h: 20+Math.floor(Math.random()*24),
+    w: 44+Math.floor(Math.random()*16),
+    color: BCOLORS[Math.floor(Math.random()*BCOLORS.length)],
+    rot: (Math.random()-0.5)*0.07,
+  }));
 }
 
 function makePipe() {
   const d = diff();
   const margin = 95;
   const gapY = d.gap/2 + margin + Math.random()*(H - d.gap - margin*2);
+  const n = 2+Math.floor(Math.random()*2);
   return {
-    x: W+12, gapY, gap:d.gap, w:50, passed:false,
-    top: makeStack(gapY - d.gap/2),
-    bot: makeStack(H - gapY - d.gap/2),
+    x: W+12, gapY, gap:d.gap, w:56, passed:false,
+    top: makeCluster(n),
+    bot: makeCluster(n),
   };
 }
 
@@ -288,38 +285,49 @@ function rr(x,y,w,h,r){
   cx.closePath();
 }
 
-function drawStack(books, px, pw, startY, maxH) {
-  let y=0;
-  for(const b of books){
-    if(y>=maxH) break;
-    const dh=Math.min(b.h, maxH-y);
-    cx.fillStyle=b.color;
-    cx.fillRect(px, startY+y, pw, dh);
-    cx.fillStyle='rgba(0,0,0,0.2)';
-    cx.fillRect(px,      startY+y, 2,  dh);
-    cx.fillRect(px+pw-2, startY+y, 2,  dh);
-    if(b.line && dh>11){
-      cx.fillStyle='rgba(255,255,255,0.09)';
-      cx.fillRect(px+5, startY+y+4, pw-10, 1.5);
-      if(dh>20) cx.fillRect(px+5, startY+y+9, pw-16, 1);
-    }
-    y+=b.h;
+function drawBook(bx, by, bw, bh, color, rot) {
+  cx.save();
+  cx.translate(bx+bw/2, by+bh/2);
+  cx.rotate(rot||0);
+  cx.fillStyle=color;
+  cx.fillRect(-bw/2,-bh/2, bw, bh);
+  // spine
+  cx.fillStyle='rgba(0,0,0,0.22)';
+  cx.fillRect(-bw/2,-bh/2, 7, bh);
+  cx.fillStyle='rgba(255,255,255,0.07)';
+  cx.fillRect(-bw/2+1,-bh/2, 1, bh);
+  // pages edge
+  cx.fillStyle='rgba(232,221,208,0.13)';
+  cx.fillRect(bw/2-4,-bh/2+1, 3, bh-2);
+  // title lines
+  cx.fillStyle='rgba(255,255,255,0.11)';
+  cx.fillRect(-bw/2+10,-bh/2+5, bw-16, 1.5);
+  if(bh>24) cx.fillRect(-bw/2+10,-bh/2+11, bw-22, 1);
+  // outline
+  cx.strokeStyle='rgba(0,0,0,0.12)'; cx.lineWidth=0.6;
+  cx.strokeRect(-bw/2,-bh/2, bw, bh);
+  cx.restore();
+}
+
+function drawCluster(books, px, pw, anchorY, dir) {
+  const sl = books.slice(0,3);
+  if(dir==='top'){
+    const totalH = sl.reduce((s,b)=>s+b.h, 0);
+    let ty = anchorY - totalH;
+    for(const b of sl){ drawBook(px+(pw-b.w)/2, ty, b.w, b.h, b.color, b.rot); ty+=b.h; }
+    cx.fillStyle='rgba(0,0,0,0.09)'; cx.fillRect(px, anchorY, pw, 4);
+  } else {
+    let ty = anchorY;
+    for(const b of sl){ drawBook(px+(pw-b.w)/2, ty, b.w, b.h, b.color, b.rot); ty+=b.h; }
+    cx.fillStyle='rgba(0,0,0,0.09)'; cx.fillRect(px, anchorY-4, pw, 4);
   }
 }
 
 function drawPipe(p) {
   const topH = p.gapY - p.gap/2;
   const botY = p.gapY + p.gap/2;
-
-  drawStack(p.top, p.x, p.w, 0,    topH);
-  drawStack(p.bot, p.x, p.w, botY, H-botY);
-
-  cx.fillStyle=TEAL2;
-  cx.fillRect(p.x-4, topH-8, p.w+8, 8);
-  cx.fillRect(p.x-4, botY,   p.w+8, 8);
-  cx.fillStyle='rgba(255,255,255,0.09)';
-  cx.fillRect(p.x-4, topH-8, p.w+8, 2);
-  cx.fillRect(p.x-4, botY,   p.w+8, 2);
+  drawCluster(p.top, p.x, p.w, topH, 'top');
+  drawCluster(p.bot, p.x, p.w, botY, 'bot');
 }
 
 // ── Draw: Miso the tabby cat ──────────────────────────────────────────────────
